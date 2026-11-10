@@ -41,7 +41,7 @@ permission:
 
 1. **阶段进度**：一行式（如「阶段 3 TP 生成完成：19 条落盘，机验通过」）——每个阶段开始/结束各一条，不逐文件叙述
 2. **关口呈递**：question 工具（口径见各阶段与硬规则 1）
-3. **关键产物通知**：落盘路径 + 条目数（如「TP 清单已落盘 output/tp/list.md（19 条）」）
+3. **关键产物通知**：落盘路径 + 条目数（如「TP 清单已落盘 output/tp/test-point-table.md（19 条）」）
 4. **异常/需决策**：机验三振、3 轮未收敛、澄清升级、权限异常
 
 禁止项：正文复述脚本命令与其输出（机验结果只报结论——failures/warnings 数 + 收敛判定，不贴 JSON）；修复过程逐条叙述；判据推理过程外露。内部协作（召唤 qa-expert 的 prompt、repair-log、state.md 更新）照常执行，不属于用户消息。
@@ -77,25 +77,25 @@ permission:
 
 ### 阶段 4 测试点质检与用户验收
 
-按修复回路使用 skill `test-point-workflow` 乙节（报告 qa-tp.md）。收敛后调用工具 `show_markdown`（入参必须是已存在的 TP 清单文件绝对路径，如 `<根>/session-*/output/tp/list.md`）展示清单，然后 question 工具呈 TP 清单与质检结论【关口 3】，验收选项：`通过 / 调整（补充、修改、删除条目，可直接贴 TP 正文） / 中止`。
+按修复回路使用 skill `test-point-workflow` 乙节（报告 qa-tp.md）。收敛后调用工具 `show_markdown`（入参必须是已存在的 TP 清单文件绝对路径，如 `<根>/session-*/output/tp/test-point-table.md`）展示清单，然后 question 工具呈 TP 清单与质检结论【关口 3】，验收选项：`通过 / 调整（补充、修改、删除条目，可直接贴 TP 正文） / 中止`。
 
 用户调整含**补充条目**时的处置路径：
 
 1. 用户贴投 TP 正文；信息不全时用 question 追问一次（custom 输入域），不强猜、不臆造。**前置判定：补充条目须属 scope 选中功能**——若属未选功能则不落盘，提示该功能不在范围内并询问是否重开关口 1 补选（补选后按既有流程生成，不走本路径）
-2. 按 9 列契约（skill `test-point-workflow` 落盘模板）规整落盘 `output/tp/list.md`，重排后续号重编
+2. 按 9 列契约（skill `test-point-workflow` 落盘模板）规整落盘 `output/tp/test-point-table.md`，重排后续号重编
 3. `state/repair-log.md` 记 `## TP-补充` 小节（列：条目来源/规整动作/新增与牵动编号）
 4. 召回 qa-expert 单轮检视（对照表复检 + 新增条目，不占 3 轮上限）
 
 ### 阶段 5 用例生成
 
-1. 输入四件套换发：scope、resources-index、clarifications、**output/tp/list.md**。不重读原文，TC 是 TP 的纯展开（需补锚点证据时按索引回查片段）。
+1. 输入四件套换发：scope、resources-index、clarifications、**output/tp/test-point-table.md**。不重读原文，TC 是 TP 的纯展开（需补锚点证据时按索引回查片段）。
 2. 判据载入：skill `test-knowledge-canon` 阶段 5 阅读路径 + skill `test-case-workflow`（甲·生成流程：方法选型 / 展开数量守恒 / TC 四列判据）。**先按每条 TP 的 `用例展开重点` 数清项数 N，再逐项落 TC**：N 就是该 TP 的用例数下限，禁止先定"N 条"再倒填内容（"每个测试点 2 条"是典型违规形态）。
-3. 落盘 `output/tc/list.md`：12 列与取值规则见 skill `test-case-workflow` 落盘模板。
+3. 落盘 `output/tc/test-case-table.md`：12 列与取值规则见 skill `test-case-workflow` 落盘模板。
 4. 机验（TP/TC 全参）：`failures` 非零 → 自修后重跑；exit 2 → 停止重试，核对用法与结构；同一 failures 连续 3 次未归零 → 呈用户。确认 warnings 中覆盖缺口（无 TC 的 TP 必须有书面理由记 state.md）与均一化提示（过半 TP 用例数相同 → 逐条复核形态算法）。
 
 ### 阶段 6 用例质检与用户验收
 
-按修复回路使用 skill `test-case-workflow` 乙节（报告 qa-tc.md）。收敛后调用工具 `show_markdown`（入参必须是已存在的 TC 清单文件绝对路径，如 `<根>/session-*/output/tc/list.md`）展示清单，然后呈用户【关口 4】；验收通过即会话完成，state.md 记"完成"。
+按修复回路使用 skill `test-case-workflow` 乙节（报告 qa-tc.md）。收敛后调用工具 `show_markdown`（入参必须是已存在的 TC 清单文件绝对路径，如 `<根>/session-*/output/tc/test-case-table.md`）展示清单，然后呈用户【关口 4】；验收通过即会话完成，state.md 记"完成"。
 
 ## 硬规则（违反即流程违规）
 

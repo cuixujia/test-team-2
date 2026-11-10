@@ -110,8 +110,8 @@ def check_clar_ref(value, clar_set, record, failures, has_clar):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--docs", action="append", required=True, help="原文检索根目录，可重复")
-    ap.add_argument("--tp", help="tp/list.md 路径")
-    ap.add_argument("--tc", help="tc/list.md 路径")
+    ap.add_argument("--tp", help="tp/test-point-table.md 路径")
+    ap.add_argument("--tc", help="tc/test-case-table.md 路径")
     ap.add_argument("--clar", help="state/clarifications.md 路径")
     ap.add_argument("--out", help="结果 JSON 输出路径（文件名须为 citation-result*.json）")
     args = ap.parse_args()

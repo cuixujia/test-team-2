@@ -8,7 +8,7 @@ description: 测试用例（TC）生成与质检——阶段5 测试专家按方
 
 ### 输入四件套（不重读原文）
 
-scope.md 选中项、resources-index.md、clarifications.md、**output/tp/list.md**。TC 是 TP 的纯展开；仅在需要补充锚点证据时按索引回查原文片段。
+scope.md 选中项、resources-index.md、clarifications.md、**output/tp/test-point-table.md**。TC 是 TP 的纯展开；仅在需要补充锚点证据时按索引回查原文片段。
 
 ### 方法选型（引用《通用测试方法论》§七"方法选型决策指南" + §五方法详解）
 
@@ -52,7 +52,7 @@ TP 的直属 TC 数量下限 = 该 TP `用例展开重点` 的**项数 N**（N �
 - **条数来自客观计数，不来自"再补一条显得充实"**：仍禁止为凑数复制改名、伪边界、同值换装。
 - 有输入域的必须含边界值用例（达界 + 越界配对）；字段校验类必须落在乘法原则上方的「字段清单 × 约束矩阵」内。
 
-### 落盘模板（output/tc/list.md，12 列，列名与机验 `TC_REQUIRED` 逐字一致）
+### 落盘模板（output/tc/test-case-table.md，12 列，列名与机验 `TC_REQUIRED` 逐字一致）
 
 ```
 编号 | 关联业务功能 | 关联TP | 用例名称 | 用例类型 | 测试方法 | 前置条件 | 测试数据 | 操作步骤 | 预期结果 | 澄清依据 | 出处锚点

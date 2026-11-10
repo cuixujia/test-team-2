@@ -86,7 +86,7 @@ scope.md 选中项、resources-index.md、clarifications.md、knowledge 方法�
 
 ① 正向流程覆盖？② 反向/异常覆盖？③ 需求明确定义的独立业务规则有无遗漏？④ 有无臆造（需求未定义的内容→删除或"(默认)"标注）？⑤ 过度拆分（可合并）？⑥ 过度合并（需拆分）？
 
-### 落盘模板（output/tp/list.md，9 列，列名与机验 `TP_REQUIRED` 逐字一致）
+### 落盘模板（output/tp/test-point-table.md，9 列，列名与机验 `TP_REQUIRED` 逐字一致）
 
 ```
 编号 | 关联业务功能 | 测试点名称 | 类型 | 测试维度 | 所属小类 | 用例展开重点 | 澄清依据 | 出处锚点

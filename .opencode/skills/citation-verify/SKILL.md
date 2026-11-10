@@ -55,7 +55,7 @@ TP、TC 均**不设优先级列**，排序即优先级（承接两 workflow skil
 ```
 python3 SKILLS_ROOT/citation-verify/scripts/verify_citation.py \
   --docs <根>/project-docs --docs <会话>/user-input \
-  --tp <会话>/output/tp/list.md --clar <会话>/state/clarifications.md \
+  --tp <会话>/output/tp/test-point-table.md --clar <会话>/state/clarifications.md \
   --out <会话>/state/citation-result.json
 ```
 
@@ -64,7 +64,7 @@ python3 SKILLS_ROOT/citation-verify/scripts/verify_citation.py \
 ```
 python3 SKILLS_ROOT/citation-verify/scripts/verify_citation.py \
   --docs <根>/project-docs --docs <会话>/user-input \
-  --tp <会话>/output/tp/list.md --tc <会话>/output/tc/list.md \
+  --tp <会话>/output/tp/test-point-table.md --tc <会话>/output/tc/test-case-table.md \
   --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json
 ```
 
