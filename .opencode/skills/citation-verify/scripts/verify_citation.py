@@ -5,6 +5,8 @@ import os
 import re
 import sys
 
+from collections import Counter
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib_citation import (
@@ -37,6 +39,16 @@ TP_DIMENSIONS = {
 TP_TYPES = {"功能级", "场景级"}
 # 测试方法六枚举（《通用测试方法论》§七方法选型，单值白名单）
 TC_METHODS = {"等价类+边界值", "决策表", "状态迁移", "场景法", "正交实验", "错误推测"}
+
+# 用例展开重点：多值分隔符与元描述剔除（项数 N 是 TC 数量下限的唯一定量来源）
+FOCUS_SEP = ";;"
+FOCUS_META = re.compile(r"每项至少|至少\s*\d+\s*条|条用例|覆盖正向|正向反向|正反向")
+
+
+def count_focus_items(text):
+    """统计 `用例展开重点` 的实项数：按 ;; 拆分，剔除元描述项（通则不是展开点）。"""
+    items = [s.strip() for s in (text or "").split(FOCUS_SEP)]
+    return len([s for s in items if s and not FOCUS_META.search(s)])
 
 
 def load_rows(path, required, kind):
@@ -121,6 +133,8 @@ def main():
     tp_ids = set()
     tp_names = {}
     tp_funcs = {}
+    tp_focus_n = {}
+    tp_tc_count = {}
     covered = set()
 
     clar_set = set()
@@ -168,8 +182,12 @@ def main():
             if tp_type not in TP_TYPES:
                 failures.append({"record": tid, "field": "类型", "anchor": tp_type or "(空)", "reason": "类型非法（仅 功能级/场景级）"})
             focus = (r.get("用例展开重点") or "").strip()
-            if not focus:
-                failures.append({"record": tid, "field": "用例展开重点", "anchor": "-", "reason": "用例展开重点为空（至少 1 项）"})
+            focus_n = count_focus_items(focus)
+            tp_focus_n[tid] = focus_n
+            if focus_n == 0:
+                failures.append({"record": tid, "field": "用例展开重点", "anchor": "-", "reason": "用例展开重点为空（至少 2 个可独立判定的展开项）"})
+            elif focus_n < 2:
+                failures.append({"record": tid, "field": "用例展开重点", "anchor": focus, "reason": "用例展开重点仅 {} 个实项，少于 2 项；两项须为可独立判定的分支，且不得以\"每项至少 1 条用例\"类元描述充数".format(focus_n)})
 
     if args.tc:
         _h, tc_rows, w = load_rows(args.tc, TC_REQUIRED, "TC清单")
@@ -190,6 +208,7 @@ def main():
                 failures.append({"record": tcid, "field": "关联TP", "anchor": ref, "reason": "关联TP {} 在 TP 清单中不存在".format(ref)})
             else:
                 covered.add(ref)
+                tp_tc_count[ref] = tp_tc_count.get(ref, 0) + 1
                 if not name_seg:
                     failures.append({"record": tcid, "field": "关联TP", "anchor": ref_raw, "reason": "关联TP 缺名称段（应为 编号+名称 双信息，第一个空格分隔）"})
                 elif tp_names.get(ref, "") != name_seg:
@@ -212,6 +231,32 @@ def main():
 
     for tid in sorted(tp_ids - covered):
         warnings.append({"record": tid, "reason": "该 TP 无任何关联用例（覆盖缺口，需人工确认）"})
+
+    # 数量守恒：直属 TC 数 M 必须 ≥ 展开重点实项数 N（下限 2）；拦截"每 TP 正好 2 条"式均摊
+    if args.tp and args.tc:
+        for tid in sorted(tp_ids):
+            n = tp_focus_n.get(tid, 0)
+            m = tp_tc_count.get(tid, 0)
+            floor = max(n, 2)
+            if m and m < floor:
+                failures.append(
+                    {
+                        "record": tid,
+                        "field": "用例数量",
+                        "anchor": "M={} / N={}".format(m, n),
+                        "reason": "直属用例 {} 条，少于展开重点项数 {}（下限 {}）——按 test-case-workflow「展开数量守恒」逐项补齐，禁改小 N、禁均摊或空壳充数".format(m, n, floor),
+                    }
+                )
+        counts = [tp_tc_count[t] for t in tp_ids if tp_tc_count.get(t, 0) > 0]
+        if len(counts) >= 5:
+            mode_val, mode_cnt = Counter(counts).most_common(1)[0]
+            if mode_cnt / len(counts) > 0.5:
+                warnings.append(
+                    {
+                        "record": "TC清单",
+                        "reason": "过半 TP 的直属用例数均为 {}（{}/{} 个 TP），疑似按 TP 均摊条数凑数（典型：每个 TP 都正好 2 条）——逐 TP 按形态算法复核展开重点项数".format(mode_val, mode_cnt, len(counts)),
+                    }
+                )
 
     summary["failures"] = len(failures)
     summary["warnings"] = len(warnings)

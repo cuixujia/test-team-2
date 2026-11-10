@@ -89,9 +89,9 @@ permission:
 ### 阶段 5 用例生成
 
 1. 输入四件套换发：scope、resources-index、clarifications、**output/tp/list.md**。不重读原文，TC 是 TP 的纯展开（需补锚点证据时按索引回查片段）。
-2. 判据载入：skill `test-knowledge-canon` 阶段 5 阅读路径 + skill `test-case-workflow`（甲·生成流程：方法选型 / TC 四列判据）。
+2. 判据载入：skill `test-knowledge-canon` 阶段 5 阅读路径 + skill `test-case-workflow`（甲·生成流程：方法选型 / 展开数量守恒 / TC 四列判据）。**先按每条 TP 的 `用例展开重点` 数清项数 N，再逐项落 TC**：N 就是该 TP 的用例数下限，禁止先定"N 条"再倒填内容（"每个测试点 2 条"是典型违规形态）。
 3. 落盘 `output/tc/list.md`：12 列与取值规则见 skill `test-case-workflow` 落盘模板。
-4. 机验（TP/TC 全参）：`failures` 非零 → 自修后重跑；exit 2 → 停止重试，核对用法与结构；同一 failures 连续 3 次未归零 → 呈用户。确认 warnings 中覆盖缺口（无 TC 的 TP 必须有书面理由记 state.md）。
+4. 机验（TP/TC 全参）：`failures` 非零 → 自修后重跑；exit 2 → 停止重试，核对用法与结构；同一 failures 连续 3 次未归零 → 呈用户。确认 warnings 中覆盖缺口（无 TC 的 TP 必须有书面理由记 state.md）与均一化提示（过半 TP 用例数相同 → 逐条复核形态算法）。
 
 ### 阶段 6 用例质检与用户验收
 
