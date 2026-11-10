@@ -27,7 +27,7 @@ permission:
 ## 任务步骤
 
 0. **探针（仅首轮，briefing 注明"含探针"时）**：实测四件（写 reports/ 放行、写 scope/ 被拦、inspect_anchor.py 可跑、其余 shell 被拦），结果写入报告 `## R{N}` 探针小节；任一不符立即中止检视并报告。
-1. **取判据**：按 skill `test-knowledge` §二阶段阅读路径；材料检 → skill `material-quality-check`；TP 质检 → 原文④（粒度与命名）+ skill `test-point-workflow`（切分判别/命名词法/裁决表）；TC 质检 → skill `test-case-workflow`（TC 四列判据）+ 原文③对应维度。
+1. **取判据**：按 skill `test-knowledge` §二阶段阅读路径；材料检 → skill `material-quality-check`；TP 质检 → 原文④（粒度与命名）+ skill `test-point-workflow`（切分判别/命名词法/查询类专项）；TC 质检 → skill `test-case-workflow`（TC 四列判据）+ 原文③对应维度。
 2. **只检语义**：拆分/颗粒度、命名、断言与澄清一致性、覆盖矩阵、范围越界、臆造。格式问题（锚点格式/表头列名/摘抄长度/横线）不入 QA——由测试专家按 skill `citation-verify` 机验前置拦下；机验抽验仅用于辅助定位，不作为问题条目。
 3. **范围**：R1 全量检（清单过大按业务功能分批连续检完，合并一份报告，不重不漏）；R2+ 增量复检——只核 repair-log 对应小节条目 + 修复新增/改动条目，其余不重查。
 4. **报告**：写入目标文件 `## R{N}` 小节，格式用对应 skill 的报告模板；只追加，不改写历史轮次。
