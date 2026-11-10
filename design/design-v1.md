@@ -19,7 +19,7 @@
 写权限用 opencode V2 `permissions` 有序规则实现（**最后匹配生效**，宽规则在前、例外在后）：
 
 - test-expert：可启动的子 agent 仅限 `qa-expert`（定义于 `.opencode/agent/qa-expert.md`，派发名唯一）；禁止写 reports/。
-- qa-expert：先全量 deny，再例外放行——read/glob/grep 全放行；`edit` 与 `write` 均仅放行 `**output/reports/**` 路径（两级通配，兼容 file/<session>/**/output/reports/）；`shell` 仅放行 `python3 *inspect_anchor.py*`（只读锚点检视脚本，脚本本身零写入能力）；skill 加载放行；其余（edit/write 其他路径、shell 其他命令、question、subagent、webfetch/websearch）全部拒绝。权限在 subagent 会话建立时固化：改权限配置后必须新开会话重派。
+- qa-expert：先全量 deny，再例外放行——read/glob/grep 全放行；`edit` 与 `write` 均仅放行 `**output/reports/**` 路径（两级通配，兼容任意根层级）；`shell` 仅放行 `python3 *inspect_anchor.py*`（只读锚点检视脚本，脚本本身零写入能力）；skill 加载放行；其余（edit/write 其他路径、shell 其他命令、question、subagent、webfetch/websearch）全部拒绝。权限在 subagent 会话建立时固化：改权限配置后必须新开会话重派。
 
 辅助机制（不是替代）：每轮 QA 结束后，测试专家抽查 reports/ 之外关键文件未被改动并记入 state.md 实施日志。
 
@@ -33,20 +33,22 @@
 
 ## 4. 运行时工作空间
 
-工作空间根约定：优先 `/file/`；若运行环境无 `/file/`，则在本团队仓库根创建 `runtime-file/` 并沿用同一结构。测试专家在会话启动时把实际根写入 state.md。结构如下（详细格式见 `design/工作空间目录结构.md`）：
+工作空间根约定：会话启动时由用户给定的**绝对路径**，判定标准为根下存在 `project-docs/` 且可写；实际根（绝对路径）由测试专家写入 state.md 实施日志。**路径口径：机验脚本全局路径用 `SKILLS_ROOT`（`.opencode/skills/` 绝对路径，部署时替换）、agent 定义用 `AGENTS_ROOT`（`.opencode/agent/` 绝对路径）占位；脚本的工作空间参数（`--docs`、清单、`--out` 等）一律展开为绝对路径，禁止相对路径。** 结构如下（详细格式见 `design/工作空间目录结构.md`）：
 
 ```text
 <工作空间根>/
 ├── project-docs/                        # 用户原始资料，只读，不动一个字
-└── session-<项目id>-<时间戳>/           # 一次会话 = 一套完整流程
+└── session-<时间戳>/           # 一次会话 = 一套完整流程
     ├── user-input/                      # 用户补充上传（只读）
     ├── scope/
     │   ├── scope.md                     # 范围确认单
     │   └── resources-index.md           # 内容索引（检索 SSOT）
     ├── state/
     │   ├── state.md                     # 进度看板：阶段/轮次/待用户事项/结论摘要/实施日志
+    │   ├── briefing.md                  # 会话不变事实：工作空间根、收敛判定语模板、判据引用；首轮标注"含探针"
     │   ├── clarifications.md            # 澄清台账
-    │   └── repair-log.md                # 修复对照表（测试专家写，QA 增量复检的输入）
+    │   ├── repair-log.md                # 修复对照表（测试专家写，QA 增量复检的输入）
+    │   └── citation-result.json         # 机验结果（verify_citation.py --out，文件名固定 citation-result*.json）
     └── output/
         ├── tp/list.md                   # 测试点清单
         ├── tc/list.md                   # 测试用例清单
@@ -65,6 +67,8 @@
 | state.md | 测试专家 | 当前阶段/轮次/待用户事项/各阶段结论摘要/实施日志 |
 | clarifications.md | 测试专家 | 澄清问题、影响面、默认建议、答复、状态、影响条目 |
 | repair-log.md | 测试专家 | 每轮修复对照表：问题编号 → 修复动作 → 牵动条目 |
+| briefing.md | 测试专家 | 会话不变事实：工作空间根（绝对路径）、收敛判定语模板、判据引用（锚点口径 / clarifications 表 / 送检自校）；首轮 QA 派发标注"含探针"（仅当 output/reports/ 尚无任何 QA 报告时） |
+| citation-result.json | 机验脚本（测试专家触发） | verify_citation.py 的 `--out` 输出：`{"ok", "summary", "failures", "warnings", "fatal_messages"}`；文件名须匹配 `citation-result*.json` |
 | tp/list.md | 测试专家 | TP 清单（6 列：编号/关联业务功能/测试点名称/类型/澄清依据/出处锚点） |
 | tc/list.md | 测试专家 | TC 清单（11 列：编号/关联业务功能/关联TP/用例名称/用例类型/前置条件/测试数据/操作步骤/预期结果/澄清依据/出处锚点） |
 | qa-materials.md、qa-tp.md、qa-tc.md | QA | 按轮次追加的质检报告 |

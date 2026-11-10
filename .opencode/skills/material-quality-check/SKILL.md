@@ -27,8 +27,10 @@ description: 资料质检（阶段2 专用）——QA 通读全部资料一次�
 锚点抽验方法：md/txt/csv 直读原文比对行区间；docx/xlsx 用只读命令逐条抽验（**单行执行，勿用 `\` 换行**，与 qa-expert bash 白名单匹配）：
 
 ```
-python3 .opencode/skills/citation-verify/scripts/inspect_anchor.py --docs <根>/project-docs --docs <会话>/user-input --anchor '<锚点>' [--anchor '<锚点2>' ...]
+python3 SKILLS_ROOT/citation-verify/scripts/inspect_anchor.py --docs <根>/project-docs --docs <会话>/user-input --anchor '<锚点>' [--anchor '<锚点2>' ...]
 ```
+
+路径口径：`SKILLS_ROOT` 为 `.opencode/skills/` 的**绝对路径**（部署时替换，禁止写相对路径）；`<根>`、`<会话>` 一律展开为**工作空间内的绝对路径**。
 
 ## R1 第二产出：待澄清问题章节
 

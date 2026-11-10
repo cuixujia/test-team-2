@@ -1,5 +1,5 @@
 ---
-description: 测试用例（TC）生成与质检——阶段5 测试专家按方法选型把每条 TP 展开为正/反/边界用例，阶段6 质检专家按九维质检全量检；内嵌 TC 四列（标题/测试数据/操作步骤/预期结果）语义判据。生成或质检测试用例时必须加载；方法内容引用 skill `test-knowledge` 四份原文，格式契约引用 skill `citation-verify`
+description: 测试用例（TC）生成与质检——阶段5 测试专家按方法选型把每条 TP 展开为正/反/边界用例，阶段6 质检专家按九维质检全量检；内嵌 TC 四列（标题/测试数据/操作步骤/预期结果）语义判据。生成或质检测试用例时必须加载；方法内容引用 skill `test-knowledge-canon` 四份原文，格式契约引用 skill `citation-verify`
 ---
 
 # 测试用例工作流（生成：测试专家 agent `test-expert` · 质检：质检专家 agent `qa-expert`）

@@ -1,5 +1,5 @@
 ---
-description: 测试点（TP）生成与质检——阶段3 测试专家按方法链生成测试点（拆功能点/命名/颗粒度/排序），阶段4 质检专家按九维质检全量检；内嵌团队切分判别（含查询/筛选类专项）、命名词法。生成或质检测试点时必须加载；方法内容引用 skill `test-knowledge` 四份原文，格式契约引用 skill `citation-verify`
+description: 测试点（TP）生成与质检——阶段3 测试专家按方法链生成测试点（拆功能点/命名/颗粒度/排序），阶段4 质检专家按九维质检全量检；内嵌团队切分判别（含查询/筛选类专项）、命名词法。生成或质检测试点时必须加载；方法内容引用 skill `test-knowledge-canon` 四份原文，格式契约引用 skill `citation-verify`
 ---
 
 # 测试点工作流（生成：测试专家 agent `test-expert` · 质检：质检专家 agent `qa-expert`）
@@ -10,7 +10,7 @@ description: 测试点（TP）生成与质检——阶段3 测试专家按方法
 
 scope.md 选中项、resources-index.md、clarifications.md、knowledge 方法链。先查索引定位原文片段再精读，不全文重读。
 
-### 方法链（引用 skill `test-knowledge` 的 `references/` 原文，按序执行）
+### 方法链（引用 skill `test-knowledge-canon` 的 `references/` 原文，按序执行）
 
 1. **维度选型**：读《测试维度定义》§三"维度选型指南"，按业务场景类型圈定 大类→测试维度→小类 组合；本轮圈定的**测试维度/所属小类**即在落盘时随条目填入对应列（见落盘模板取值规则），不另设基线产物
 2. **维度关注点**：按圈定的小类读《通用测试规则》对应章节，拿到每个小类的详细关注点清单；关注点经模板裁剪后写入条目 `用例展开重点` 列

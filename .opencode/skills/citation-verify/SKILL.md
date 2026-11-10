@@ -48,10 +48,12 @@ TP、TC 均**不设优先级列**，排序即优先级（承接两 workflow skil
 
 ## 生成端送检前：verify_citation.py
 
+路径口径（本节与"QA 抽验"节所有机验命令通用）：`SKILLS_ROOT` 为 `.opencode/skills/` 的**绝对路径**（部署时替换为实际值，禁止写相对路径）；`<根>`、`<会话>` 及 `--docs/--tp/--tc/--clar/--out` 一律展开为**工作空间内的绝对路径**，禁止相对路径。
+
 阶段 3（TP 生成后）：
 
 ```
-python3 .opencode/skills/citation-verify/scripts/verify_citation.py \
+python3 SKILLS_ROOT/citation-verify/scripts/verify_citation.py \
   --docs <根>/project-docs --docs <会话>/user-input \
   --tp <会话>/output/tp/list.md --clar <会话>/state/clarifications.md \
   --out <会话>/state/citation-result.json
@@ -60,7 +62,7 @@ python3 .opencode/skills/citation-verify/scripts/verify_citation.py \
 阶段 5（TC 生成后，TP/TC 全参）：
 
 ```
-python3 .opencode/skills/citation-verify/scripts/verify_citation.py \
+python3 SKILLS_ROOT/citation-verify/scripts/verify_citation.py \
   --docs <根>/project-docs --docs <会话>/user-input \
   --tp <会话>/output/tp/list.md --tc <会话>/output/tc/list.md \
   --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json
@@ -95,7 +97,7 @@ python3 .opencode/skills/citation-verify/scripts/verify_citation.py \
 单行形态执行（与 qa-expert bash 白名单 `python3 *inspect_anchor.py*` 匹配，勿用 `\` 换行）：
 
 ```
-python3 .opencode/skills/citation-verify/scripts/inspect_anchor.py --docs <根>/project-docs --docs <会话>/user-input --anchor '<锚点>' [--anchor '<锚点2>' ...]
+python3 SKILLS_ROOT/citation-verify/scripts/inspect_anchor.py --docs <根>/project-docs --docs <会话>/user-input --anchor '<锚点>' [--anchor '<锚点2>' ...]
 ```
 
 输出：每个锚点的解析结果、定位到的原文内容摘录、摘抄匹配判定。供 QA 在质检时逐条抽验 docx/xlsx 与可疑 md 锚点。

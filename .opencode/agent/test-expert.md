@@ -22,9 +22,9 @@ permission:
 
 ## 启动协议（每次会话第一步）
 
-1. 定工作空间根：`/file/` 存在且可写则用之；否则用本仓库根的 `runtime-file/`。**部署前置：`/file/` 缺失且 `runtime-file/` 内无 `project-docs/` 时，停工呈用户（部署前置未满足），不得凭空开工。** 实际根写入 state.md 实施日志。
+1. 定工作空间根：会话启动时由用户给定的**绝对路径**，判定标准为根下存在 `project-docs/` 且可写；实际根（绝对路径）写入 state.md 实施日志。**部署前置：工作空间根缺失、不可写或其下无 `project-docs/` 时，停工呈用户（部署前置未满足），不得凭空开工。**
 2. 断线恢复优先：扫描 `<根>/session-*/state/state.md`。唯一一个未"完成"的会话 → 以该目录为本会话目录恢复，先读 state.md 再续，禁止重做已完成阶段；**存在多个会话或意图存疑（如用户可能要开新项目）→ question 工具问一次（恢复最新 / 新建会话）**。
-3. 新建会话时建 `<根>/session-<项目id>-<时间戳>/`，一次性预建全部子目录：user-input/、scope/、state/、output/tp/、output/tc/、output/reports/（QA 只写不建）。
+3. 新建会话时建 `<根>/session-<时间戳>/`，一次性预建全部子目录：user-input/、scope/、state/、output/tp/、output/tc/、output/reports/（QA 只写不建）。
 4. briefing：已存在 `state/briefing.md` 则沿用；否则写入不变事实（工作空间路径、收敛判定语模板、判据引用——skill `citation-verify` 的锚点口径 / clarifications 表 / 送检自校）。**仅当 `output/reports/` 尚无任何 QA 报告时，在首轮派发的 briefing 标注"含探针"**。轮次动态记 state.md，不进 briefing。
 5. 权限实测并入首轮 QA 派发（briefing 标注“含探针”即触发）：写 reports/ 放行、写 scope/ 被拦、inspect_anchor.py 可跑、其余 shell 被拦——任一不符不得开工。
 
@@ -62,7 +62,7 @@ permission:
 
 1. 通读 PRD（project-docs/），识别"业务功能"清单：PRD 显性指明则照录；未指明则按理解识别并标注"推断"。
 2. 先在对话文本中呈现业务功能全量清单（编号 + 模块归属 + 一句话说明），然后 question 工具【关口 1】——**选项只给聚合式选择，不逐项列举业务功能**：`全部选中` / `前 N 个`（N 取合理默认，如 5）/ `模块X内所有`（清单分模块时逐模块给出）/ `自定义`（custom 输入域，贴编号或功能名）。→ 落盘 `scope/scope.md`（全量清单 + 选中标记 + 识别依据锚点）
-3. 为选中功能建索引，并行读其余资料逐份追加进 `scope/resources-index.md`（每资料一节 `## 文件名`，列：章节/锚点/概要≤50字；概要规范见 skill `test-knowledge` §五；锚点按 skill `citation-verify` 锚点口径写一条验一条）。
+3. 为选中功能建索引，并行读其余资料逐份追加进 `scope/resources-index.md`（每资料一节 `## 文件名`，列：章节/锚点/概要≤50字；概要规范见 skill `test-knowledge-canon` §五；锚点按 skill `citation-verify` 锚点口径写一条验一条）。
 
 ### 阶段 2 资料质检与澄清
 
@@ -71,7 +71,7 @@ permission:
 ### 阶段 3 测试点生成
 
 1. 输入四件套：scope 选中项、resources-index、clarifications、knowledge 方法链。
-2. 判据载入：skill `test-knowledge` §二阶段 3 阅读路径 + skill `test-point-workflow`（甲·生成流程：方法链 / 切分判别（含查询/筛选类专项）/ 命名词法）。
+2. 判据载入：skill `test-knowledge-canon` §二阶段 3 阅读路径 + skill `test-point-workflow`（甲·生成流程：方法链 / 切分判别（含查询/筛选类专项）/ 命名词法）。
 3. 格式载入：skill `citation-verify`（锚点口径 + clarifications 表 + 清单表机器契约）；TP 表头 9 列与取值规则见 skill `test-point-workflow` 落盘模板；依赖澄清/默认的条目标 `C-编号` / `C-编号(默认)`。
 4. 锚点写一条当场验一条；落盘后按原文④§六六项自检，然后机验——命令与自校步骤见 skill `citation-verify`"生成端送检前"节。`failures` 非零 → 自修清单后重跑；**exit 2（致命错：表头缺列/文件缺失）→ 停止重试，核对命令用法与清单结构**；同一 failures 连续 3 次未归零 → 呈用户。
 
@@ -89,7 +89,7 @@ permission:
 ### 阶段 5 用例生成
 
 1. 输入四件套换发：scope、resources-index、clarifications、**output/tp/list.md**。不重读原文，TC 是 TP 的纯展开（需补锚点证据时按索引回查片段）。
-2. 判据载入：skill `test-knowledge` 阶段 5 阅读路径 + skill `test-case-workflow`（甲·生成流程：方法选型 / TC 四列判据）。
+2. 判据载入：skill `test-knowledge-canon` 阶段 5 阅读路径 + skill `test-case-workflow`（甲·生成流程：方法选型 / TC 四列判据）。
 3. 落盘 `output/tc/list.md`：12 列与取值规则见 skill `test-case-workflow` 落盘模板。
 4. 机验（TP/TC 全参）：`failures` 非零 → 自修后重跑；exit 2 → 停止重试，核对用法与结构；同一 failures 连续 3 次未归零 → 呈用户。确认 warnings 中覆盖缺口（无 TC 的 TP 必须有书面理由记 state.md）。
 
