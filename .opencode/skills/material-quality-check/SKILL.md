@@ -4,13 +4,11 @@ description: 资料质检（阶段2 专用）——QA 通读全部资料一次�
 
 # 资料质检（QA · 阶段 2）
 
-## 方法来源
-
-质检方法采用静态评审的检查表思想：见 skill `test-knowledge` 的 `references/1 通用测试方法论.md` §4.1（检查表/走查技术——按固定检查项清单逐项核对、每项给出客观判定）。本 skill 只登记检查项与产物格式，方法不复述。
+静态评审：对索引逐条对照下表检查项。检查方法见知识① §4.1（检查表技术），方法细节不在此展开。
 
 ## 输入
 
-经理委派必须提供：工作空间根与会话目录、scope/scope.md（选中项）、scope/resources-index.md、全部原文目录（project-docs/ 与 user-input/）、round 编号；R2+ 轮另有 state/repair-log.md 对应小节名（`## 材料R{n}`）。
+测试专家委派必须提供：工作空间根与会话目录、scope/scope.md（选中项）、scope/resources-index.md、全部原文目录（project-docs/ 与 user-input/）、round 编号；R2+ 轮另有 state/repair-log.md 对应小节名（`## 材料R{n}`）。
 
 ## R1 全量检查（先通读，凡圈定范围内的内容均须对照）
 
@@ -26,11 +24,10 @@ description: 资料质检（阶段2 专用）——QA 通读全部资料一次�
 | 6 | 资料内部矛盾 | 不同资料间对同一事项描述冲突 → 记问题并开澄清 | 重大 |
 | 7 | 索引冗余 | 与圈定范围明显无关的索引条目 | 一般 |
 
-锚点抽验方法：md/txt/csv 直读原文比对行区间；docx/xlsx 用只读命令逐条抽验：
+锚点抽验方法：md/txt/csv 直读原文比对行区间；docx/xlsx 用只读命令逐条抽验（**单行执行，勿用 `\` 换行**，与 qa-expert bash 白名单匹配）：
 
 ```
-python3 .opencode/skills/citation-verify/scripts/inspect_anchor.py \
-  --docs <根>/project-docs --docs <会话>/user-input --anchor '<锚点>'
+python3 .opencode/skills/citation-verify/scripts/inspect_anchor.py --docs <根>/project-docs --docs <会话>/user-input --anchor '<锚点>' [--anchor '<锚点2>' ...]
 ```
 
 ## R1 第二产出：待澄清问题章节
@@ -77,8 +74,8 @@ python3 .opencode/skills/citation-verify/scripts/inspect_anchor.py \
 收敛 / 未收敛（剩余阻塞项：Q-…-…）
 ```
 
-R1 轮在问题清单后另加 `### 待澄清问题`：`| 编号建议 | 问题（含锚点） | 影响面 | 默认建议 |`。澄清编号由经理后续编排（C-01 递增），QA 不占号。
+R1 轮在问题清单后另加 `### 待澄清问题`：`| 编号建议 | 问题（含锚点） | 影响面 | 默认建议 |`。编号列只填"建议"，正式 C-01 递增编号由测试专家编排，QA 不占号。
 
 ## 纪律
 
-只检不修；每个问题必须有证据锚点；禁止臆测原文；修复建议写给经理但不代做。
+只检不修；每个问题必须有证据锚点；禁止臆测原文；修复建议写给测试专家但不代做。
