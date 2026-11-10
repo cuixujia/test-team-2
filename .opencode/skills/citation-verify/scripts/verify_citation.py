@@ -15,7 +15,7 @@ from lib_citation import (
 )
 
 TP_REQUIRED = ["编号", "关联业务功能", "测试点名称", "类型", "测试维度", "所属小类", "用例展开重点", "澄清依据", "出处锚点"]
-TC_REQUIRED = ["编号", "关联业务功能", "关联TP", "用例名称", "用例类型", "前置条件", "测试数据", "操作步骤", "预期结果", "澄清依据", "出处锚点"]
+TC_REQUIRED = ["编号", "关联业务功能", "关联TP", "用例名称", "用例类型", "测试方法", "前置条件", "测试数据", "操作步骤", "预期结果", "澄清依据", "出处锚点"]
 CLAR_REQUIRED = ["编号", "来源", "问题", "影响面", "默认建议", "答复", "状态"]
 OUT_NAME = re.compile(r"^citation-result.*\.json$")
 
@@ -33,6 +33,8 @@ TP_DIMENSIONS = {
     "可靠性与稳定性": {"故障恢复", "健壮性"},
 }
 TP_TYPES = {"功能级", "场景级"}
+# 测试方法六枚举（《通用测试方法论》§七方法选型，单值白名单）
+TC_METHODS = {"等价类+边界值", "决策表", "状态迁移", "场景法", "正交实验", "错误推测"}
 
 
 def load_rows(path, required, kind):
@@ -100,6 +102,8 @@ def main():
     summary = {"tp_rows": 0, "tc_rows": 0, "checks": 0, "failures": 0, "warnings": 0}
 
     tp_ids = set()
+    tp_names = {}
+    tp_funcs = {}
     covered = set()
 
     clar_set = set()
@@ -122,6 +126,8 @@ def main():
                 failures.append({"record": tid or "(空)", "field": "编号", "anchor": "-", "reason": "TP 编号格式非法（应为 TP-数字）"})
                 continue
             tp_ids.add(tid)
+            tp_names[tid] = (r.get("测试点名称") or "").strip()
+            tp_funcs[tid] = (r.get("关联业务功能") or "").strip()
             anc = anchors_of(r.get("出处锚点"))
             if not anc:
                 failures.append({"record": tid, "field": "出处锚点", "anchor": "-", "reason": "锚点为空（每个测试点必须有出处）"})
@@ -154,11 +160,26 @@ def main():
             if not re.fullmatch(r"TC-\d+", tcid):
                 failures.append({"record": tcid or "(空)", "field": "编号", "anchor": "-", "reason": "TC 编号格式非法（应为 TC-数字）"})
                 continue
-            ref = (r.get("关联TP") or "").strip()
-            if ref not in tp_ids:
+            ref_raw = (r.get("关联TP") or "").strip()
+            ref, _, name_seg = ref_raw.partition(" ")
+            ref = ref.strip()
+            name_seg = name_seg.strip()
+            if not re.fullmatch(r"TP-\d+", ref):
+                failures.append({"record": tcid, "field": "关联TP", "anchor": ref_raw or "(空)", "reason": "关联TP 编号段格式非法（应为 TP-数字，第一个空格分隔编号与名称）"})
+            elif ref not in tp_ids:
                 failures.append({"record": tcid, "field": "关联TP", "anchor": ref, "reason": "关联TP {} 在 TP 清单中不存在".format(ref)})
             else:
                 covered.add(ref)
+                if not name_seg:
+                    failures.append({"record": tcid, "field": "关联TP", "anchor": ref_raw, "reason": "关联TP 缺名称段（应为 编号+名称 双信息，第一个空格分隔）"})
+                elif tp_names.get(ref, "") != name_seg:
+                    failures.append({"record": tcid, "field": "关联TP", "anchor": name_seg, "reason": "关联TP 名称段与 TP 清单中 {} 的测试点名称不一致".format(ref)})
+                tp_func = (r.get("关联业务功能") or "").strip()
+                if tp_funcs.get(ref) is not None and tp_func != tp_funcs.get(ref):
+                    failures.append({"record": tcid, "field": "关联业务功能", "anchor": tp_func, "reason": "关联业务功能与主 TP {} 的关联业务功能不一致".format(ref)})
+            m = (r.get("测试方法") or "").strip()
+            if m not in TC_METHODS:
+                failures.append({"record": tcid, "field": "测试方法", "anchor": m or "(空)", "reason": "测试方法非法（六枚举：等价类+边界值/决策表/状态迁移/场景法/正交实验/错误推测，单值）"})
             anc = anchors_of(r.get("出处锚点"))
             if not anc:
                 failures.append({"record": tcid, "field": "出处锚点", "anchor": "-", "reason": "锚点为空（每个用例必须有出处）"})

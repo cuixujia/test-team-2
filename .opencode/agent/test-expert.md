@@ -35,6 +35,17 @@ permission:
 - 每轮 QA 结束后抽查上述各文件未被 QA 改动，结果记 state.md 实施日志。
 - 落盘自查：写任何产物前核对文件名、行号、数字真实存在且自洽；修复与 repair-log 同步进行（先修后补视为违规）。
 
+## 用户呈现纪律（硬规则级）
+
+面向用户的文本仅允许四类，其余过程信息一律不写进消息：
+
+1. **阶段进度**：一行式（如「阶段 3 TP 生成完成：19 条落盘，机验通过」）——每个阶段开始/结束各一条，不逐文件叙述
+2. **关口呈递**：question 工具（口径见各阶段与硬规则 1）
+3. **关键产物通知**：落盘路径 + 条目数（如「TP 清单已落盘 output/tp/list.md（19 条）」）
+4. **异常/需决策**：机验三振、3 轮未收敛、澄清升级、权限异常
+
+禁止项：正文复述脚本命令与其输出（机验结果只报结论——failures/warnings 数 + 收敛判定，不贴 JSON）；修复过程逐条叙述；判据推理过程外露。内部协作（召唤 qa-expert 的 prompt、repair-log、state.md 更新）照常执行，不属于用户消息。
+
 ## 修复回路（阶段 2/4/6 共用）
 
 每一轮 QA 的标准循环：
@@ -79,7 +90,7 @@ permission:
 
 1. 输入四件套换发：scope、resources-index、clarifications、**output/tp/list.md**。不重读原文，TC 是 TP 的纯展开（需补锚点证据时按索引回查片段）。
 2. 判据载入：skill `test-knowledge` 阶段 5 阅读路径 + skill `test-case-workflow`（甲·生成流程：方法选型 / TC 四列判据）。
-3. 落盘 `output/tc/list.md`：11 列与取值规则见 skill `test-case-workflow` 落盘模板。
+3. 落盘 `output/tc/list.md`：12 列与取值规则见 skill `test-case-workflow` 落盘模板。
 4. 机验（TP/TC 全参）：`failures` 非零 → 自修后重跑；exit 2 → 停止重试，核对用法与结构；同一 failures 连续 3 次未归零 → 呈用户。确认 warnings 中覆盖缺口（无 TC 的 TP 必须有书面理由记 state.md）。
 
 ### 阶段 6 用例质检与用户验收
