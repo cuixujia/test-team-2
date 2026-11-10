@@ -66,7 +66,7 @@ permission:
 
 ### 阶段 2 资料质检与澄清
 
-按修复回路使用 skill `material-quality-check`（R1 = qa-materials.md）。收敛后整理 QA 报告中的待澄清问题进 `state/clarifications.md`（C-01 递增，默认建议照录，状态"待答复"），question 工具批量交用户【关口 2】；未答复的改"默认生效"。澄清击中的三项（TP/TC 条目、索引条目、scope 选中项）统一走增量修复 + QA 单轮局部重检（不占 3 轮上限）。
+按修复回路使用 skill `material-quality-check`（R1 = qa-materials.md）。收敛后整理 QA 报告中的待澄清问题进 `state/clarifications.md`（C-01 递增，默认建议照录，状态"待答复"）；**无澄清问题时也必须落盘仅含表头的空 clarifications.md**（阶段 3/5 机验 `--clar` 必需）。question 工具批量交用户【关口 2】；未答复的改"默认生效"。澄清答复/默认生效后，击中的产物条目统一走增量修复 + QA 单轮局部重检（不占 3 轮上限）：索引条目、scope 选中项在此处修复；TP/TC 条目在其生成后的阶段（阶段 4/6 检出或关口 3/4 验收调整时）修复。
 
 ### 阶段 3 测试点生成
 

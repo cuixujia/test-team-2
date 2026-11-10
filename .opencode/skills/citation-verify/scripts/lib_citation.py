@@ -294,3 +294,19 @@ def table_with_columns(text, required):
         if all(col in header for col in required):
             return header, rows
     return None, None
+
+
+def table_fragment_count(text):
+    """返回文件解析出的表格片段数（含孤儿片段）。契约清单文件应为单表；>1 时首表之外的数据行不可见。"""
+    return len(parse_md_tables(text))
+
+
+def broken_table_rows(text):
+    """检测疑似被真实换行打断的表格行：以 | 开头但未以 | 结尾。
+    单元格内换行应使用 <br> 字面量；真实换行会使 parse_md_tables 静默跳过该行。"""
+    warns = []
+    for i, line in enumerate(text.splitlines(), 1):
+        s = line.strip()
+        if s.startswith("|") and len(s) > 1 and not s.endswith("|"):
+            warns.append((i, s[:40]))
+    return warns

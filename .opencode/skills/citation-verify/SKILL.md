@@ -75,6 +75,7 @@ python3 .opencode/skills/citation-verify/scripts/verify_citation.py \
 6. TP 值域：`类型` ∈ {功能级, 场景级}；`测试维度` ∈《测试维度定义》§一十枚举；`所属小类` ∈ 所选维度下 §二合法小类集；`用例展开重点` 非空
 7. TC 值域与一致性：`测试方法` ∈ 六枚举；`关联TP` 双段解析（编号段存在 + 名称段与 TP `测试点名称` 逐字一致）；`关联业务功能` 与主 TP 逐字一致
 8. TC 对 TP 的覆盖缺口检查（无 TC 关联的 TP，仅警告）
+9. 表格完整性警告（仅警告，人工确认口径）：以 `|` 开头但未以 `|` 结尾的行会被解析跳过（单元格内真实换行，应使用 `<br>`）；文件解析出多个表格片段时首表之外的数据行不可见——两者均入 warnings 提示修复断行并整表重排
 
 输出 JSON：`{"ok", "summary", "failures": [{record, field, anchor, reason}], "warnings": [...]}`。
 

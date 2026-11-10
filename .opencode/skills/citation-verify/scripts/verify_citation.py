@@ -10,7 +10,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib_citation import (
     CLAR_REF,
     anchors_of,
+    broken_table_rows,
     check_anchor,
+    table_fragment_count,
     table_with_columns,
 )
 
@@ -39,7 +41,7 @@ TC_METHODS = {"等价类+边界值", "决策表", "状态迁移", "场景法", "
 
 def load_rows(path, required, kind):
     if not path:
-        return None, None
+        return None, None, []
     if not os.path.isfile(path):
         fatal(["{} 文件不存在：{}".format(kind, path)])
     with open(path, encoding="utf-8", errors="replace") as fh:
@@ -49,7 +51,22 @@ def load_rows(path, required, kind):
     header, rows = table_with_columns(text, required)
     if header is None:
         fatal(["{} 表头缺少必需列，需要：{}".format(kind, "、".join(required))])
-    return header, rows
+    warns = [
+        {
+            "record": "{} 表格第 {} 行".format(kind, ln),
+            "reason": "表格行以 | 开头但未以 | 结尾——疑似单元格内真实换行打断行（该行已被解析跳过）；单元格内换行应使用 <br>",
+        }
+        for ln, _c in broken_table_rows(text)
+    ]
+    frag = table_fragment_count(text)
+    if frag > 1:
+        warns.append(
+            {
+                "record": kind + " 表格结构",
+                "reason": "文件解析出 {} 个表格片段——首表之外的数据行已静默跳过（疑似断行后的孤立片段，应修复断行并整表重排）".format(frag),
+            }
+        )
+    return header, rows, warns
 
 
 def fatal(messages):
@@ -109,7 +126,8 @@ def main():
     clar_set = set()
     has_clar = False
     if args.clar:
-        _h, crows = load_rows(args.clar, CLAR_REQUIRED, "clarifications")
+        _h, crows, w = load_rows(args.clar, CLAR_REQUIRED, "clarifications")
+        warnings.extend(w)
         if crows is not None:
             has_clar = True
             for r in crows:
@@ -118,7 +136,8 @@ def main():
                     clar_set.add(cid)
 
     if args.tp:
-        _h, tp_rows = load_rows(args.tp, TP_REQUIRED, "TP清单")
+        _h, tp_rows, w = load_rows(args.tp, TP_REQUIRED, "TP清单")
+        warnings.extend(w)
         summary["tp_rows"] = len(tp_rows)
         for r in tp_rows:
             tid = (r.get("编号") or "").strip()
@@ -153,7 +172,8 @@ def main():
                 failures.append({"record": tid, "field": "用例展开重点", "anchor": "-", "reason": "用例展开重点为空（至少 1 项）"})
 
     if args.tc:
-        _h, tc_rows = load_rows(args.tc, TC_REQUIRED, "TC清单")
+        _h, tc_rows, w = load_rows(args.tc, TC_REQUIRED, "TC清单")
+        warnings.extend(w)
         summary["tc_rows"] = len(tc_rows)
         for r in tc_rows:
             tcid = (r.get("编号") or "").strip()
