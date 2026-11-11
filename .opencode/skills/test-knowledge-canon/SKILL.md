@@ -1,15 +1,15 @@
 ---
-name: test-knowledge
+name: test-knowledge-canon
 description: 测试团队唯一权威知识库——四份原文（方法论/维度定义/通用规则/测试点生成指南），原文为不可变知识层；团队判别细则、TC 四列判据与格式契约内嵌于 skill `test-point-workflow` / `test-case-workflow` / `citation-verify`。生成测试点、生成测试用例、质检（材料/TP/TC）需要判定"怎么拆、怎么命名、测哪些维度、用什么方法"时必须加载
 ---
 
 # 测试知识库（原文唯一权威）
 
-本 skill 只登记知识清单、阅读路径和维护规则。四份原文是唯一知识层；团队判别细则与格式契约的最新形态内嵌于三处：`test-point-workflow`（切分/命名词法/查询类专项判据）、`test-case-workflow`（TC 四列判据）、`citation-verify`（锚点与机器契约）。两套内容冲突时以原文为准，并按维护规则同步修订判据。
+本 skill 只登记知识清单、阅读路径和维护规则。四份原文是唯一知识层；团队判别细则与格式契约的最新形态内嵌于三处：`test-point-workflow`（切分/命名词法/裁决表）、`test-case-workflow`（TC 四列判据）、`citation-verify`（锚点与机器契约）。两套内容冲突时以原文为准，并按维护规则同步修订判据。
 
 ## 一、知识清单
 
-路径锚点（项目内，自包含）：`.opencode/skills/test-knowledge/references/`。前四份为**原文只读件**，一字不改：
+路径锚点：`SKILLS_ROOT/test-knowledge-canon/references/`（`SKILLS_ROOT` 为 `.opencode/skills/` 的**绝对路径**，部署时替换，禁止写相对路径；表内 `references/...` 均相对本 skill 根）。前四份为**原文只读件**，一字不改：
 
 | 文件 | 解决什么问题 | 关键章节 |
 |---|---|---|
@@ -18,7 +18,7 @@ description: 测试团队唯一权威知识库——四份原文（方法论/维
 | `references/3 通用测试规则.md` | 每个维度具体测什么 | §一 功能测试（1~6 维度逐项关注点）、§二 非功能测试、附录对应关系 |
 | `references/4 测试点生成指南.md` | 测试点怎么拆、怎么命名、怎么从需求推导 | §二 功能点拆分、§三 命名规范、§四 颗粒度、§五 模板库、§六 生成工作流程 |
 
-四份原文为不可变知识层——需要修订时由用户决定整体替换文件；团队判据与格式细则不在本表，内嵌载体为：切分/命名词法 → skill `test-point-workflow`；TC 四列判据 → skill `test-case-workflow`；锚点纪律 / clarifications 表 / 送检自校 → skill `citation-verify`（均可增改）。
+四份原文为不可变知识层——需要修订时由用户决定整体替换文件；团队判据与格式细则不在本表，内嵌载体为：切分/命名词法 + 用户裁决登记表 → skill `test-point-workflow`；TC 四列判据 → skill `test-case-workflow`；锚点纪律 / clarifications 表 / 送检自校 → skill `citation-verify`（均可增改）。
 
 不再新建补充件：2026-11-10 起补充件已并入上述三处内嵌载体（原《TP切分与命名判别》归 test-point-workflow，《TC列判据》归两 workflow，《产物格式规范》归 citation-verify）。
 
@@ -29,11 +29,11 @@ description: 测试团队唯一权威知识库——四份原文（方法论/维
 | 阶段 | 必读 | 用途 |
 |---|---|---|
 | **所有阶段写产物前** | skill `citation-verify`（锚点纪律 / clarifications 表 / 清单表机器契约） | TP/TC/clarifications 表头与取值、锚点写法、送检自校 |
-| 阶段 3 生成测试点 | 原文④§二/§三/§四/§六 → skill `test-point-workflow`（切分判别/命名词法/查询类专项） | 拆功能点、定测试点、命名、颗粒度与全集自检 |
+| 阶段 3 生成测试点 | 原文④§二/§三/§四/§六 → skill `test-point-workflow`（切分判别/命名词法/裁决表） | 拆功能点、定测试点、命名、颗粒度与全集自检 |
 | 阶段 3 维度展开 | 原文②§二/§三 + 原文③对应维度 | 对照业务场景类型确定维度组合与关注点 |
 | 阶段 3 方法材料 | 原文①§7 | 分析方法选型；方法详解按需查 §5 |
-| 阶段 4 质检测试点 | 原文④（粒度与命名判据） + skill `test-point-workflow`（切分/命名/查询类专项） | 独立语义检查的判据来源 |
-| 阶段 5 生成测试用例 | 原文③对应维度关注点 + skill `test-case-workflow`（TC 四列判据） | 字段校验、场景展开为 TC；四列判据；方法选型成果落 `测试方法` 列 |
+| 阶段 4 质检测试点 | 原文④（粒度与命名判据） + skill `test-point-workflow`（切分/命名/裁决） | 独立语义检查的判据来源 |
+| 阶段 5 生成测试用例 | 原文③对应维度关注点 + skill `test-case-workflow`（TC 四列判据） | 字段校验、场景展开为 TC；四列判据 |
 | 阶段 2/4/6 质检 | 按上述路径取对应判据 | 质检发现须落到知识条目上 |
 
 ## 三、维护规则
@@ -45,7 +45,7 @@ description: 测试团队唯一权威知识库——四份原文（方法论/维
 
 ## 四、业务规则供给
 
-- 业务特有测试规则不做系统级知识，由用户以输入资料方式提供：若用户提供了业务规则，则参考用户的规则；未提供时不叠加、缺项走澄清，不得臆造。
+- 业务特有测试规则不做系统级知识，由用户以输入资料方式提供：若用户提供了业务规则，则参考用户的规则；未提供时不叠加、缺项走澄清，不得臆造（口径见 skill `test-point-workflow` 用户裁决登记表·裁决七）。
 
 ## 五、关联文件：resources-index.md 概要书写规范
 

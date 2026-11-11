@@ -25,9 +25,9 @@ description: 引文机验与产物格式契约——TP/TC 送检前的机器校�
 
 ## 清单表机器契约（列名与脚本 *_REQUIRED 逐字一致；语义判据在两 workflow skill，本节只载表面事实）
 
-**TP 表 9 列**（`TP_REQUIRED`）：`编号 | 关联业务功能 | 测试点名称 | 类型 | 测试维度 | 所属小类 | 用例展开重点 | 澄清依据 | 出处锚点`，取值详表见 skill `test-point-workflow`。`关联业务功能` 格式=第一个空格分隔 F 编号与名称（如 `F01 需求新增`）。机验除表面格式外另校值域：`类型` ∈ {功能级, 场景级}；`测试维度` ∈《测试维度定义》§一十枚举、`所属小类` ∈ 所选维度下 §二合法小类集（组合合法性，均单值）；`用例展开重点` 非空。小类级覆盖不做机验（无基线产物），由质检人工对表（见 test-point-workflow 质检维度 5）。
+**TP 表 9 列**（`TP_REQUIRED`）：`编号 | 关联业务功能 | 测试点名称 | 类型 | 测试维度 | 所属小类 | 用例展开重点 | 澄清依据 | 出处锚点`，取值详表见 skill `test-point-workflow`。`关联业务功能` 格式=第一个空格分隔 F 编号与名称（如 `F01 需求新增`）。机验除表面格式外另校值域：`类型` ∈ {功能级, 场景级}；`测试维度` ∈《测试维度定义》§一十枚举、`所属小类` ∈ 所选维度下 §二合法小类集（组合合法性，均单值）；`用例展开重点` 非空且**项数 N ≥ 2**（按 ` ;; ` 拆分计数，剔除"每项至少 N 条用例""覆盖正向反向"类元描述项），N 是阶段 5 **TC 数量下限**的唯一定量来源。小类级覆盖不做机验（无基线产物），由质检人工对表（见 test-point-workflow 质检维度 5）。
 
-**TC 表 12 列**（`TC_REQUIRED`）：`编号 | 关联业务功能 | 关联TP | 用例名称 | 用例类型 | 测试方法 | 前置条件 | 测试数据 | 操作步骤 | 预期结果 | 澄清依据 | 出处锚点`，取值详表见 skill `test-case-workflow`。机验除表面格式外另校：`测试方法` ∈ 六枚举（等价类+边界值/决策表/状态迁移/场景法/正交实验/错误推测）；`关联TP` 双段（第一个空格分隔）：编号段 `TP-\d+` 且存在于 TP 清单、**名称段与 TP 清单该 TP 的 `测试点名称` 逐字一致**；`关联业务功能` 逐字等于其主 TP 的 `关联业务功能`（join 一致性）。
+**TC 表 12 列**（`TC_REQUIRED`）：`编号 | 关联业务功能 | 关联TP | 用例名称 | 用例类型 | 测试方法 | 前置条件 | 测试数据 | 操作步骤 | 预期结果 | 澄清依据 | 出处锚点`，取值详表见 skill `test-case-workflow`。机验除表面格式外另校：`测试方法` ∈ 六枚举（等价类+边界值/决策表/状态迁移/场景法/正交实验/错误推测）；`关联TP` 双段（第一个空格分隔）：编号段 `TP-\d+` 且存在于 TP 清单、**名称段与 TP 清单该 TP 的 `测试点名称` 逐字一致**；`关联业务功能` 逐字等于其主 TP 的 `关联业务功能`（join 一致性）；**数量守恒**（`--tp` 与 `--tc` 同参时生效）：逐 TP 统计直属 TC 数 M，M < max(N,2) 判 failures——拦截"每个 TP 都正好 2 条"式均摊凑数。
 
 TP、TC 均**不设优先级列**，排序即优先级（承接两 workflow skill 的排序口径）。
 
@@ -48,21 +48,23 @@ TP、TC 均**不设优先级列**，排序即优先级（承接两 workflow skil
 
 ## 生成端送检前：verify_citation.py
 
+路径口径（本节与"QA 抽验"节所有机验命令通用）：`SKILLS_ROOT` 为 `.opencode/skills/` 的**绝对路径**（部署时替换为实际值，禁止写相对路径）；`<根>`、`<会话>` 及 `--docs/--tp/--tc/--clar/--out` 一律展开为**工作空间内的绝对路径**，禁止相对路径。
+
 阶段 3（TP 生成后）：
 
 ```
-python3 .opencode/skills/citation-verify/scripts/verify_citation.py \
+python3 SKILLS_ROOT/citation-verify/scripts/verify_citation.py \
   --docs <根>/project-docs --docs <会话>/user-input \
-  --tp <会话>/output/tp/list.md --clar <会话>/state/clarifications.md \
+  --tp <会话>/output/tp/test-point-table.md --clar <会话>/state/clarifications.md \
   --out <会话>/state/citation-result.json
 ```
 
 阶段 5（TC 生成后，TP/TC 全参）：
 
 ```
-python3 .opencode/skills/citation-verify/scripts/verify_citation.py \
+python3 SKILLS_ROOT/citation-verify/scripts/verify_citation.py \
   --docs <根>/project-docs --docs <会话>/user-input \
-  --tp <会话>/output/tp/list.md --tc <会话>/output/tc/list.md \
+  --tp <会话>/output/tp/test-point-table.md --tc <会话>/output/tc/test-case-table.md \
   --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json
 ```
 
@@ -75,7 +77,8 @@ python3 .opencode/skills/citation-verify/scripts/verify_citation.py \
 6. TP 值域：`类型` ∈ {功能级, 场景级}；`测试维度` ∈《测试维度定义》§一十枚举；`所属小类` ∈ 所选维度下 §二合法小类集；`用例展开重点` 非空
 7. TC 值域与一致性：`测试方法` ∈ 六枚举；`关联TP` 双段解析（编号段存在 + 名称段与 TP `测试点名称` 逐字一致）；`关联业务功能` 与主 TP 逐字一致
 8. TC 对 TP 的覆盖缺口检查（无 TC 关联的 TP，仅警告）
-9. 表格完整性警告（仅警告，人工确认口径）：以 `|` 开头但未以 `|` 结尾的行会被解析跳过（单元格内真实换行，应使用 `<br>`）；文件解析出多个表格片段时首表之外的数据行不可见——两者均入 warnings 提示修复断行并整表重排
+9. **数量守恒检查**（`--tp` 与 `--tc` 同参时生效）：逐 TP 统计直属 TC 数 M 与 `用例展开重点` 项数 N，**M < max(N,2) 判 failures**（N 取剔除元描述后的实项数）；已挂 TC 但条数不足不适用"覆盖缺口仅警告"豁免。另输出均一化 warning：过半 TP 的 M 完全相同（典型形态＝每个 TP 都正好 2 条）→ 提示按 `test-case-workflow` 形态表逐条复核
+10. 表格完整性警告（仅警告，人工确认口径）：以 `|` 开头但未以 `|` 结尾的行会被解析跳过（单元格内真实换行，应使用 `<br>`）；文件解析出多个表格片段时首表之外的数据行不可见——两者均入 warnings 提示修复断行并整表重排
 
 输出 JSON：`{"ok", "summary", "failures": [{record, field, anchor, reason}], "warnings": [...]}`。
 
@@ -86,7 +89,7 @@ python3 .opencode/skills/citation-verify/scripts/verify_citation.py \
 ## 送检前自校（一次跑完，零才送检）
 
 1. `verify_citation.py` 一次跑完 `--tp`/`--tc`/`--clar`，`failures` 与 `fatal_messages` 全零才送检；参数以脚本 `--help` 为准。
-2. 逐列对照清单表机器契约：类型/用例类型/澄清依据/锚点格式白名单；TP 另核对 测试维度/所属小类 值域与组合、用例展开重点非空；TC 另核对 测试方法六枚举、关联TP 双段解析（编号存在 + 名称段与 TP `测试点名称` 逐字一致）、关联业务功能与主 TP 逐字一致。
+2. 逐列对照清单表机器契约：类型/用例类型/澄清依据/锚点格式白名单；TP 另核对 测试维度/所属小类 值域与组合、用例展开重点非空且项数 ≥2；TC 另核对 测试方法六枚举、关联TP 双段解析（编号存在 + 名称段与 TP `测试点名称` 逐字一致）、关联业务功能与主 TP 逐字一致、**逐 TP 直属 TC 数 ≥ 其展开重点项数（不足即补 TC，不许改小 N）**。
 3. 表头列名与脚本 `*_REQUIRED` 逐字核对（改列名必须同步改脚本，且双向核对）。
 4. 每条锚点已当场跑过 `inspect_anchor.py`（见"锚点口径"第 7 条）。
 
@@ -95,7 +98,7 @@ python3 .opencode/skills/citation-verify/scripts/verify_citation.py \
 单行形态执行（与 qa-expert bash 白名单 `python3 *inspect_anchor.py*` 匹配，勿用 `\` 换行）：
 
 ```
-python3 .opencode/skills/citation-verify/scripts/inspect_anchor.py --docs <根>/project-docs --docs <会话>/user-input --anchor '<锚点>' [--anchor '<锚点2>' ...]
+python3 SKILLS_ROOT/citation-verify/scripts/inspect_anchor.py --docs <根>/project-docs --docs <会话>/user-input --anchor '<锚点>' [--anchor '<锚点2>' ...]
 ```
 
 输出：每个锚点的解析结果、定位到的原文内容摘录、摘抄匹配判定。供 QA 在质检时逐条抽验 docx/xlsx 与可疑 md 锚点。
