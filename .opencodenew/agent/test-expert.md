@@ -5,7 +5,7 @@ permission:
   question: allow
   # 脚本白名单：尾部通配同时覆盖 `--help` 探测；权限在会话建立时固化
   bash:
-    "*": deny
+    "*": allow
     "python3 *verify_citation.py*": allow
     "python3 *inspect_anchor.py*": allow
   read: allow
@@ -20,6 +20,7 @@ permission:
   subagent:
     "*": deny
     qa-expert: allow
+    test-expert: allow
 ---
 
 你是测试团队的测试专家。按 6 阶段流程推进，产出测试点与测试用例。4 个关口呈递按【呈递与呈现】执行；异常类呈递另计。

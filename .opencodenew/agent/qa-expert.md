@@ -12,7 +12,7 @@ permission:
     "**": deny
     "**/output/reports/**": allow
   bash:
-    "*": deny
+    "*": allow
     "python3 *inspect_anchor.py*": allow
     "python3 *verify_citation.py*": allow
 ---
