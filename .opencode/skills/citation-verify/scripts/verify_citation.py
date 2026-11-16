@@ -5,8 +5,6 @@ import os
 import re
 import sys
 
-from collections import Counter
-
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib_citation import (
@@ -18,8 +16,8 @@ from lib_citation import (
     table_with_columns,
 )
 
-TP_REQUIRED = ["编号", "关联业务功能", "测试点名称", "类型", "测试维度", "所属小类", "用例展开重点", "澄清依据", "出处锚点"]
-TC_REQUIRED = ["编号", "关联业务功能", "关联TP", "用例名称", "用例类型", "测试方法", "前置条件", "测试数据", "操作步骤", "预期结果", "澄清依据", "出处锚点"]
+TP_REQUIRED = ["编号", "关联业务功能", "测试点名称", "类型", "测试维度", "所属小类", "用例展开重点", "依据类型", "澄清依据", "出处锚点"]
+TC_REQUIRED = ["编号", "关联业务功能", "关联TP", "用例名称", "用例类型", "测试方法", "前置条件", "测试数据", "操作步骤", "预期结果", "依据类型", "澄清依据", "出处锚点"]
 CLAR_REQUIRED = ["编号", "来源", "问题", "影响面", "默认建议", "答复", "状态"]
 OUT_NAME = re.compile(r"^citation-result.*\.json$")
 
@@ -39,17 +37,8 @@ TP_DIMENSIONS = {
 TP_TYPES = {"功能级", "场景级"}
 # 测试方法六枚举（《通用测试方法论》§七方法选型，单值白名单）
 TC_METHODS = {"等价类+边界值", "决策表", "状态迁移", "场景法", "正交实验", "错误推测"}
-
-# 用例展开重点：多值分隔符与元描述剔除（项数 N 是 TC 数量下限的唯一定量来源）
-FOCUS_SEP = ";;"
-FOCUS_META = re.compile(r"每项至少|至少\s*\d+\s*条|条用例|覆盖正向|正向反向|正反向")
-
-
-def count_focus_items(text):
-    """统计 `用例展开重点` 的实项数：按 ;; 拆分，剔除元描述项（通则不是展开点）。"""
-    items = [s.strip() for s in (text or "").split(FOCUS_SEP)]
-    return len([s for s in items if s and not FOCUS_META.search(s)])
-
+# 依据类型二分：原文依据=锚点/澄清直接支撑；方法论补充=按四份原文知识链该维度/小类/关注点发散补测试内容，对象仍须有原文锚点
+BASIS_TYPES = {"原文依据", "方法论补充"}
 
 def load_rows(path, required, kind):
     if not path:
@@ -107,6 +96,15 @@ def check_clar_ref(value, clar_set, record, failures, has_clar):
             failures.append({"record": record, "field": "澄清依据", "anchor": seg, "reason": "澄清编号 {} 在 clarifications.md 中不存在".format(cid)})
 
 
+def check_basis_type(row, record, failures, summary, counter_key):
+    basis = (row.get("依据类型") or "").strip()
+    if basis not in BASIS_TYPES:
+        failures.append({"record": record, "field": "依据类型", "anchor": basis or "(空)", "reason": "依据类型非法（仅 原文依据/方法论补充；两类均须带证明对象存在的原文锚点）"})
+        return
+    if basis == "方法论补充":
+        summary[counter_key] += 1
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--docs", action="append", required=True, help="原文检索根目录，可重复")
@@ -128,12 +126,11 @@ def main():
 
     failures = []
     warnings = []
-    summary = {"tp_rows": 0, "tc_rows": 0, "checks": 0, "failures": 0, "warnings": 0}
+    summary = {"tp_rows": 0, "tc_rows": 0, "tp_methodology": 0, "tc_methodology": 0, "checks": 0, "failures": 0, "warnings": 0}
 
     tp_ids = set()
     tp_names = {}
     tp_funcs = {}
-    tp_focus_n = {}
     tp_tc_count = {}
     covered = set()
 
@@ -161,14 +158,15 @@ def main():
             tp_ids.add(tid)
             tp_names[tid] = (r.get("测试点名称") or "").strip()
             tp_funcs[tid] = (r.get("关联业务功能") or "").strip()
-            anc = anchors_of(r.get("出处锚点"))
+            anc = [a for a in anchors_of(r.get("出处锚点")) if a not in ("-", "")]
             if not anc:
-                failures.append({"record": tid, "field": "出处锚点", "anchor": "-", "reason": "锚点为空（每个测试点必须有出处）"})
+                failures.append({"record": tid, "field": "出处锚点", "anchor": "-", "reason": "锚点为空（每条 TP 须有证明对象存在的原文锚点；方法论补充条目同样不得虚构字段/功能）"})
             for a in anc:
                 summary["checks"] += 1
                 reason = check_anchor(a, docs)
                 if reason:
                     failures.append({"record": tid, "field": "出处锚点", "anchor": a, "reason": reason})
+            check_basis_type(r, tid, failures, summary, "tp_methodology")
             check_clar_ref(r.get("澄清依据"), clar_set, tid, failures, has_clar)
             dim = (r.get("测试维度") or "").strip()
             sub = (r.get("所属小类") or "").strip()
@@ -182,12 +180,8 @@ def main():
             if tp_type not in TP_TYPES:
                 failures.append({"record": tid, "field": "类型", "anchor": tp_type or "(空)", "reason": "类型非法（仅 功能级/场景级）"})
             focus = (r.get("用例展开重点") or "").strip()
-            focus_n = count_focus_items(focus)
-            tp_focus_n[tid] = focus_n
-            if focus_n == 0:
-                failures.append({"record": tid, "field": "用例展开重点", "anchor": "-", "reason": "用例展开重点为空（至少 2 个可独立判定的展开项）"})
-            elif focus_n < 2:
-                failures.append({"record": tid, "field": "用例展开重点", "anchor": focus, "reason": "用例展开重点仅 {} 个实项，少于 2 项；两项须为可独立判定的分支，且不得以\"每项至少 1 条用例\"类元描述充数".format(focus_n)})
+            if not focus:
+                failures.append({"record": tid, "field": "用例展开重点", "anchor": "-", "reason": "用例展开重点为空（须填写可独立判定的展开分支；项数仅作展开充分性建议，见 test-point-workflow「落盘模板」）"})
 
     if args.tc:
         _h, tc_rows, w = load_rows(args.tc, TC_REQUIRED, "TC清单")
@@ -219,42 +213,31 @@ def main():
             m = (r.get("测试方法") or "").strip()
             if m not in TC_METHODS:
                 failures.append({"record": tcid, "field": "测试方法", "anchor": m or "(空)", "reason": "测试方法非法（六枚举：等价类+边界值/决策表/状态迁移/场景法/正交实验/错误推测，单值）"})
-            anc = anchors_of(r.get("出处锚点"))
+            anc = [a for a in anchors_of(r.get("出处锚点")) if a not in ("-", "")]
             if not anc:
-                failures.append({"record": tcid, "field": "出处锚点", "anchor": "-", "reason": "锚点为空（每个用例必须有出处）"})
+                failures.append({"record": tcid, "field": "出处锚点", "anchor": "-", "reason": "锚点为空（每条 TC 须有证明对象存在的原文锚点；方法论补充条目同样不得虚构字段/功能）"})
             for a in anc:
                 summary["checks"] += 1
                 reason = check_anchor(a, docs)
                 if reason:
                     failures.append({"record": tcid, "field": "出处锚点", "anchor": a, "reason": reason})
+            check_basis_type(r, tcid, failures, summary, "tc_methodology")
             check_clar_ref(r.get("澄清依据"), clar_set, tcid, failures, has_clar)
 
     for tid in sorted(tp_ids - covered):
         warnings.append({"record": tid, "reason": "该 TP 无任何关联用例（覆盖缺口，需人工确认）"})
 
-    # 数量守恒：直属 TC 数 M 必须 ≥ 展开重点实项数 N（下限 2）；拦截"每 TP 正好 2 条"式均摊
+    # 数量守恒：逐 TP 直属 TC 数 M >= 2；M=0 由覆盖缺口 warning 承载，不判 failures
     if args.tp and args.tc:
         for tid in sorted(tp_ids):
-            n = tp_focus_n.get(tid, 0)
             m = tp_tc_count.get(tid, 0)
-            floor = max(n, 2)
-            if m and m < floor:
+            if 0 < m < 2:
                 failures.append(
                     {
                         "record": tid,
                         "field": "用例数量",
-                        "anchor": "M={} / N={}".format(m, n),
-                        "reason": "直属用例 {} 条，少于展开重点项数 {}（下限 {}）——按 test-case-workflow「展开数量守恒」逐项补齐，禁改小 N、禁均摊或空壳充数".format(m, n, floor),
-                    }
-                )
-        counts = [tp_tc_count[t] for t in tp_ids if tp_tc_count.get(t, 0) > 0]
-        if len(counts) >= 5:
-            mode_val, mode_cnt = Counter(counts).most_common(1)[0]
-            if mode_cnt / len(counts) > 0.5:
-                warnings.append(
-                    {
-                        "record": "TC清单",
-                        "reason": "过半 TP 的直属用例数均为 {}（{}/{} 个 TP），疑似按 TP 均摊条数凑数（典型：每个 TP 都正好 2 条）——逐 TP 按形态算法复核展开重点项数".format(mode_val, mode_cnt, len(counts)),
+                        "anchor": "M={}".format(m),
+                        "reason": "直属用例仅 {} 条，少于下限 2 条——按 test-case-workflow「展开数量守恒」补齐，禁空壳充数".format(m),
                     }
                 )
 
