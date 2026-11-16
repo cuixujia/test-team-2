@@ -57,7 +57,7 @@ permission:
 
 1. 输入：`scope/scope.md` 选中项、`scope/resources-index.md`、`state/clarifications.md`、`test-knowledge-canon` 知识清单。先查索引定位原文片段再精读，不全文重读。
 2. 按 `test-point-workflow` 生成，合并后按该 skill 排序并从头连续重编号。
-3. 落盘 `output/tp/test-point-table.md`。
+3. 落盘 `output/tp/test-point-table.md`，按【写权与落盘】分批写入。
 4. 送检自检：按 `quality-check`【锚点口径】用 `inspect_anchor.py` 对本清单全部锚点批量验真一次，未命中的全部修复重验；自检通过后跑机验（单行执行，路径全部展开为绝对路径）：
 
    ```bash
@@ -76,7 +76,7 @@ permission:
 
 1. 输入：`scope/scope.md`、`scope/resources-index.md`、`state/clarifications.md`、`output/tp/test-point-table.md`，并按 `test-knowledge-canon` 知识清单定位《通用测试规则》对应维度。不重读整篇原文，TC 是 TP 的纯展开；需补锚点证据或核查取值时按索引回查片段。
 2. 按 `test-case-workflow` 生成，排序跟着主 TP 走。
-3. 落盘 `output/tc/test-case-table.md`。
+3. 落盘 `output/tc/test-case-table.md`，按【写权与落盘】分批写入。
 4. 送检自检：按 `quality-check`【锚点口径】用 `inspect_anchor.py` 对本清单全部锚点批量验真一次，未命中的全部修复重验；自检通过后跑机验（单行执行，路径全部展开为绝对路径）：
 
    ```bash
@@ -103,6 +103,8 @@ permission:
 
 ### 写权与落盘
 
+- 更新既有文档（`state.md`、`clarifications.md`、`repair-log.md`、`scope.md`、`resources-index.md` 等）时合并写入：同一文件本轮的全部改动合并为一次编辑调用完成，多个文件的独立改动并行提交；禁止连续多次调用、每次只改一行或一格。
+- TP/TC 清单分批写入：首次调用写入文件骨架（标题 + 表头），数据行按业务功能分段追加，每批 ≤60 行；批间不重写已落盘行，全部批次完成后统一核对总条数与连续编号，再进送检自检。
 - 阶段推进、每轮修复、每个关口完成后更新 `state.md`；轮次动态记 `state.md`，不进 briefing；每轮 QA 结束后抽查产物未被 QA 改动，结果记实施日志。
 - 落盘前核对文件名、行号、数字真实存在且自洽；数值型具体值逐字自校。
 
