@@ -44,7 +44,7 @@ description: 资料 / 测试点 / 测试用例三域质检判据、报告规范�
 | Q-M-R1-D1 | …… | …… | …… | …… |
 
 ### 收敛判定
-收敛 / 未收敛，列剩余阻塞项
+Y / N，列剩余阻塞与重大项
 ```
 
 | 字段 | 要求 |
@@ -55,7 +55,7 @@ description: 资料 / 测试点 / 测试用例三域质检判据、报告规范�
 | 新增条目检查 | R2+ 填写 |
 | 待澄清问题 | 仅 `qa-materials.md` 有；检什么与登记规则见【待澄清问题】 |
 | 待澄清资料缺口 | 仅 `qa-materials.md` 有；一行一个缺口、一条一个问题，检什么与登记规则见【待澄清资料缺口】 |
-| 收敛判定 | 无阻塞级问题即收敛，不得把未修复的阻塞项降级放行；判定语「阻塞 N / 重大 N / 一般 N；收敛判定 Y/N；一句理由」 |
+| 收敛判定 | 阻塞与重大均为 0 才判 Y，两者不得降级放行；一般项不阻止收敛，遗留项记入 `state.md` 带过关口。判定语「阻塞 N / 重大 N / 一般 N；收敛判定 Y/N；一句理由」 |
 
 ### 质检判据
 
@@ -84,17 +84,13 @@ TP / TC 共用：
 2. 摘抄含半角双引号、竖线、` => `，或单元格含竖线，即格式非法；多锚点用 ` ;; ` 分隔，分隔符须 ASCII `-`。
 3. md 行区间须 `1 ≤ 起始 ≤ 结束 ≤ 总行数`；docx 标题须对应 Heading 段落；禁裸格式 `文件名:行号`。
 4. 两类 `依据类型` 均带锚点逐条验真：`原文依据` 须支撑判定性内容，`方法论补充` 只须证明对象在原文存在。
-5. 抽验：每功能模块 ≥3 条，md/txt/csv 直读原文比对，docx/xlsx 用 `inspect_anchor.py`；脚本零写入、不读清单、不产生 failures，命令单行执行：
-
-```bash
-python3 SKILLS_ROOT/quality-check/scripts/inspect_anchor.py --docs <根>/project-docs --docs <会话>/user-input --anchor '<锚点>' [--anchor '<锚点2>' ...]
-```
+5. 验真由机验 `verify_citation.py` 统一完成，见【机验前置】。
 
 ### 机验前置
 
 按 `verify_citation.py` 行为：
 
-1. **锚点**：按【锚点口径】；归一空白后子串比对，截断式按前缀匹配。
+1. **锚点**：按【锚点口径】；归一空白后子串比对，截断式按前缀匹配。`--index` 验索引锚点行，`--tp`、`--tc` 验清单「出处锚点」列。
 2. **表格**：缺列、文件缺失或为空 → `fatal`；竖线不闭合的行被跳过、首表外数据行不可见 → warnings。
 3. **值域与关联**：`类型` / `测试维度` / `所属小类` / `测试方法` / `依据类型` 逐行校验，白名单依次取 `TP_DIMENSIONS`、`TC_METHODS`、`BASIS_TYPES`，`所属小类` 单值；维度组合以 `test-knowledge-canon`《测试维度定义》「一、大类与测试维度总览」「二、测试维度明细」为准；`关联TP` 与 `关联业务功能` 须逐字一致；编号格式合法。
 4. **澄清依据**：` ;; ` 分隔逐段校验 `C-\d+`，可带 `(默认)`，须存在于 `state/clarifications.md`；整格 `-` 或空为无澄清。
@@ -107,6 +103,16 @@ python3 SKILLS_ROOT/quality-check/scripts/inspect_anchor.py --docs <根>/project
 ## 资料质检
 
 对索引逐条对照检查项，产出汇入 R1 报告：索引与概要类问题进「问题清单」，歧义点进「待澄清问题」，依据缺口进「待澄清资料缺口」。
+
+### 机验执行
+
+用 `--index`，不带 `--out`：
+
+```bash
+python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --index <会话>/scope/resources-index.md
+```
+
+机验通过后按【检查项】语义检视，原文按锚点定位片段核对。
 
 ### 检查项
 
@@ -143,7 +149,17 @@ python3 SKILLS_ROOT/quality-check/scripts/inspect_anchor.py --docs <根>/project
 
 ## 测试点质检
 
-与【质检判据】并用：
+与【质检判据】并用。
+
+### 机验执行
+
+用 `--tp`，不带 `--out`：
+
+```bash
+python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/test-point-table.md --clar <会话>/state/clarifications.md
+```
+
+通过后进入语义检视。
 
 | 维度 | 判定要点 | 分级参考 |
 |---|---|---|
@@ -155,7 +171,17 @@ python3 SKILLS_ROOT/quality-check/scripts/inspect_anchor.py --docs <根>/project
 
 ## 测试用例质检
 
-与【质检判据】并用：
+与【质检判据】并用。
+
+### 机验执行
+
+用 `--tp` 与 `--tc` 同参，不带 `--out`；`--tp` 供 TC 交叉校验，不重判 TP 自身：
+
+```bash
+python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/test-point-table.md --tc <会话>/output/tc/test-case-table.md --clar <会话>/state/clarifications.md
+```
+
+通过后进入语义检视。
 
 | 维度 | 判定要点 | 分级参考 |
 |---|---|---|
