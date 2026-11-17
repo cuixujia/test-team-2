@@ -13,7 +13,6 @@ DOCX_POS = re.compile(r"^(?P<file>.+?\.docx)#(?P<section>.+)$", re.IGNORECASE)
 MD_POS = re.compile(r"^(?P<file>.+?):(?P<start>\d+)(?:-(?P<end>\d+))?$")
 CLAR_REF = re.compile(r"^(C-\d+)(\(默认\))?$")
 SEP_LINE = re.compile(r"^:?-{3,}:?$")
-MAX_QUOTE = 50
 
 
 def norm(s):
@@ -33,12 +32,7 @@ def split_anchor(anchor):
 
 
 def core_quote(q):
-    q = q.strip()
-    truncated = False
-    while q and q[-1] in ".…":
-        truncated = True
-        q = q[:-1]
-    return q, truncated
+    return q.strip().rstrip(".…")
 
 
 def anchors_of(cell):
@@ -150,26 +144,14 @@ def xlsx_cell(path, sheet, coord):
         return None, "未找到单元格：{}".format(coord)
 
 
-def check_quote_common(quote):
-    if not quote.strip():
-        return "摘抄为空"
-    core, _truncated = core_quote(quote)
-    if not core:
-        return "摘抄为空"
-    if len(core) > MAX_QUOTE:
-        return "摘抄超过50字（{}字）".format(len(core))
-    return None
-
-
 def check_anchor(anchor, roots):
     parsed = split_anchor(anchor)
     if parsed is None:
         return "锚点格式非法（应为 位置 => \"摘抄\"）"
     pos, quote = parsed
-    err = check_quote_common(quote)
-    if err:
-        return err
-    core, truncated = core_quote(quote)
+    core = core_quote(quote)
+    if not core:
+        return "摘抄为空"
     core_n = norm(core)
 
     mx = XLSX_POS.match(pos)
