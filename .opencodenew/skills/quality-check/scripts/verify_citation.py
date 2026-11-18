@@ -279,8 +279,9 @@ def main():
             check_basis_type(r, tcid, failures, summary, "tc_methodology")
             check_clar_ref(r.get("澄清依据"), clar_set, tcid, failures, has_clar)
 
-    for tid in sorted(tp_ids - covered):
-        warnings.append({"record": tid, "reason": "该 TP 无任何关联用例（覆盖缺口，需人工确认）"})
+    if args.tc:
+        for tid in sorted(tp_ids - covered):
+            warnings.append({"record": tid, "reason": "该 TP 无任何关联用例（覆盖缺口，需人工确认）"})
 
     # 数量守恒：逐 TP 直属 TC 数 M >= 2；M=0 由覆盖缺口 warning 承载，不判 failures
     if args.tp and args.tc:
