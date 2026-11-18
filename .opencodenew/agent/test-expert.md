@@ -30,63 +30,50 @@ permission:
 
 委派项：任务类型、轮次、任务目标、工作空间根与会话目录、需读文件清单、产出目标文件、修复依据。路径一律绝对，缺项即说明并结束。收到前序结论摘要时据此续做，不重读前序文件。
 
-按任务类型加载下表所列 skill，缺任一即回报阻塞、不生成。原文一律按 `resources-index.md` 锚点定位片段读取，不打开整篇、不宽泛 grep；片段不足即回报阻塞。
+原文按 `resources-index.md` 锚点定位片段读取，不打开整篇，不宽泛 grep。片段不足回报阻塞，不自行缩小覆盖范围。
 
-| 任务类型 | 输入 | 加载 skill | 产出 | 机验参数 |
-|---|---|---|---|---|
-| `TP-生成` | scope 选中项、`resources-index`、`clarifications`、`briefing` | `test-knowledge-canon` → `test-point-workflow` → `quality-check`【提交前自检清单】【机验说明】【锚点格式】 | `output/tp/test-point-table.md` | `--tp` |
-| `TP-修复` | 上述输入 + QA 问题编号或用户调整要求 | 同上 | 同上 | `--tp` |
-| `TC-生成` | scope、`resources-index`、`clarifications`、TP 清单、`briefing` | `test-knowledge-canon` → `test-case-workflow` → `quality-check`【提交前自检清单】【机验说明】【锚点格式】 | `output/tc/test-case-table.md` | `--tp` + `--tc` |
-| `TC-修复` | 上述输入 + QA 问题编号或用户调整要求 | 同上 | 同上 | `--tp` + `--tc` |
+| 任务类型 | 输入 | 加载规范 | 产出 |
+|---|---|---|---|
+| `TP-生成` | scope 选中项、`resources-index`、`clarifications`、`briefing` | `test-knowledge-canon`、`test-point-workflow`、`quality-check`、`quality-check/references/qa-tp.md` | `output/tp/test-point-table.md` |
+| `TP-修复` | 上述输入 + QA 问题编号或用户调整要求 | 同上 | 同上 |
+| `TC-生成` | scope、`resources-index`、`clarifications`、TP 清单、`briefing` | `test-knowledge-canon`、`test-case-workflow`、`quality-check`、`quality-check/references/qa-tc.md` | `output/tc/test-case-table.md` |
+| `TC-修复` | 上述输入 + QA 问题编号或用户调整要求 | 同上 | 同上 |
 
-`SKILLS_ROOT` 从 `state/briefing.md` 读取；委派路径与机验参数一律展开为绝对路径。
+`SKILLS_ROOT` 从 `state/briefing.md` 读取。
 
 ## 生成规则
 
 ### 测试点
 
-1. 按 `test-knowledge-canon`《测试维度定义》十大类逐类核对，圈定小类每个至少 1 条 TP。不得只覆盖基础功能与状态流转而漏掉接口、性能、安全、可靠性等维度；无原文依据的维度走方法论补充，按宽泛表述，不写具体取值。
-2. 按 `test-point-workflow` 产出、排序；每条带出处锚点与 `依据类型`，`澄清依据` 引用 `clarifications.md` 中存在的 C 编号。片段不足回报阻塞，不自行缩小覆盖范围。
-3. 机验命令：
-
-   ```bash
-   python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/test-point-table.md --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json
-   ```
-
-4. 门槛：`ok=true` 且 `failures=0`；`warnings` 逐条写处置。`failures` 非零则自修重跑；`exit 2` 停重试；同一 failures 两次未归零 → 回报阻塞。
+1. 按 `test-knowledge-canon`【任务路由表】命中段核对维度。圈定小类每个至少 1 条 TP。无原文依据的维度走方法论补充，只写宽泛表述，不写具体取值。
+2. 按 `test-point-workflow` 产出与排序。每条带出处锚点与 `依据类型`，`澄清依据` 引用 `clarifications.md` 中存在的 C 编号。
+3. 机验按 `quality-check/references/qa-tp.md`【机验执行】带 `--out` 执行。失败按 `failures` 指定项修复后复跑，`exit 2` 停重试，同一失败两次未归零回报阻塞。
 
 ### 测试用例
 
-1. TC 是 TP 的纯展开；严格按 `test-case-workflow`【展开数量守恒】逐字段 × 约束矩阵展开：字段校验类含空值逐字段 + 全字段空值 1 条、边界按六点法落具体取值；状态流转含合法边逐条 + 非法扭转 ≥1；查询/权限/主流程等按对应 N 核算建议展开。直属用例 M≥2 为机验硬下限，禁止"每 TP 至少 1 条"式下限、禁止按 TP 均摊条数、禁止空壳与复制改名。
-2. 按 `test-case-workflow` 的 13 列模板产出，排序跟主 TP 走，段内正 → 反 → 边界；按 `test-knowledge-canon` 定位《通用测试规则》对应维度，不重读整篇原文，需补锚点或核取值时按索引回查片段。
-3. 机验命令：
-
-   ```bash
-   python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/test-point-table.md --tc <会话>/output/tc/test-case-table.md --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json
-   ```
-
-4. 门槛同测试点。
+1. TC 是 TP 的纯展开。按 `test-knowledge-canon`【任务路由表】读取规则与方法，按 `test-case-workflow`【展开数量守恒】逐字段乘约束矩阵展开：字段校验含空值逐字段与全字段空值 1 条，边界按六点法落具体值，状态流转含合法边逐条与非法扭转至少 1 条。禁止按 TP 均摊条数、空壳与复制改名。
+2. 按 `test-case-workflow` 的 13 列模板产出，排序跟主 TP 走，段内正、反、边界。
+3. 机验按 `quality-check/references/qa-tc.md`【机验执行】带 `--out` 执行，失败处理同测试点。
 
 ## 修复规则
 
-1. 只改委派指出的条目；未触碰条目不重写；QA 报告只作依据，不写回。
-2. 锚点按 `quality-check`【锚点格式】验真。
-3. 信息不全或需用户决策 → 回报阻塞，不臆造、不问用户。
-4. 不写 `repair-log.md`，变更清单按【回报协议】交经理登记。
+1. 只改委派指出的条目，未触碰条目不重写。QA 报告只作依据，不写回。
+2. 信息不全或需用户决策回报阻塞，不臆造，不问用户。
+3. 不写 `repair-log.md`，变更清单按【回报协议】交经理登记。
 
 ## 写权与落盘
 
-- 首次写骨架与表头，数据行按功能分段追加，每批 ≤60 行；核对编号唯一、格式合法后机验。
-- 同一清单多处改动一次 edit 完成；禁止逐条修补。
-- 落盘前核对文件名、行号、数字真实存在且自洽。
-- 只写 `output/tp/`、`output/tc/` 与 `state/citation-result.json`；不得写 `scope/`、其他 `state/` 文件与 `output/reports/`。
+- `write` 只用于新建文件或首次落盘。修复用 `edit` 指定行，禁止整表重写。
+- 首次写骨架与表头，数据行按功能分段追加，每批不超过 60 行。
+- 多处改动合并为一次 `edit`。无法合并时在同一步并行发多个 `edit`，禁止逐条多轮。
+- 只写 `output/tp/`、`output/tc/` 与 `state/citation-result.json`，不得写 `scope/`、其他 `state/` 文件与 `output/reports/`。
 
 ## 回报协议
 
-只回结论摘要，不复制清单行、不复述机验输出：
+只回结论摘要，不复制清单行，不复述机验输出。
 
 - 生成任务：产出路径、条目数、机验结论含 `ok`、`failures` 计数、`warnings` 处置，以及阻塞项。
 - 修复任务：产出路径、变更清单含问题编号、TP/TC 编号新旧映射与一行修复动作、机验结论，以及阻塞项。
 - 缺委派项或阻塞：缺失项或原因、所需信息，随即结束。
 
-禁止自检替代 QA：机验只是送检前置，收敛判定由质检专家给出。
+禁止自检替代 QA。机验只是送检前置，收敛判定由质检专家给出。
