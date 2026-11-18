@@ -272,10 +272,14 @@ def parse_md_tables(text):
 
 
 def table_with_columns(text, required):
-    for header, rows in parse_md_tables(text):
-        if all(col in header for col in required):
-            return header, rows
-    return None, None
+    """返回所有含必需列的表格，行合并为一张。
+    澄清台账按两道澄清分两表或三表落盘，列相同，需全部读取以拿全 C 编号。"""
+    matched = [(h, r) for h, r in parse_md_tables(text) if all(col in h for col in required)]
+    if not matched:
+        return None, None
+    header = matched[0][0]
+    rows = [row for _h, body in matched for row in body]
+    return header, rows
 
 
 def table_fragment_count(text):

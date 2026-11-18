@@ -29,6 +29,7 @@ from lib_citation import (
     anchors_of,
     broken_table_rows,
     check_anchor,
+    parse_md_tables,
     table_fragment_count,
     table_with_columns,
 )
@@ -77,12 +78,13 @@ def load_rows(path, required, kind):
         }
         for ln, _c in broken_table_rows(text)
     ]
+    matched = sum(1 for h, _ in parse_md_tables(text) if all(col in h for col in required))
     frag = table_fragment_count(text)
-    if frag > 1:
+    if frag > matched:
         warns.append(
             {
                 "record": kind + " 表格结构",
-                "reason": "文件解析出 {} 个表格片段——首表之外的数据行已静默跳过（疑似断行后的孤立片段，应修复断行并整表重排）".format(frag),
+                "reason": "文件解析出 {} 个表格片段，其中 {} 个含必需列——其余 {} 个片段的数据行未被读取（疑似断行后的孤立片段，应修复断行并整表重排）".format(frag, matched, frag - matched),
             }
         )
     return rows, warns
@@ -165,6 +167,7 @@ def main():
     summary = {"index_anchors": 0, "tp_rows": 0, "tc_rows": 0, "tp_methodology": 0, "tc_methodology": 0, "checks": 0, "failures": 0, "warnings": 0}
 
     tp_ids = set()
+    tc_ids = set()
     tp_names = {}
     tp_funcs = {}
     tp_tc_count = {}
@@ -199,6 +202,9 @@ def main():
             tid = (r.get("编号") or "").strip()
             if not re.fullmatch(r"TP-\d+", tid):
                 failures.append({"record": tid or "(空)", "field": "编号", "anchor": "-", "reason": "TP 编号格式非法（应为 TP-数字）"})
+                continue
+            if tid in tp_ids:
+                failures.append({"record": tid, "field": "编号", "anchor": "-", "reason": "TP 编号重复（编号永久唯一，不得复用）"})
                 continue
             tp_ids.add(tid)
             tp_names[tid] = (r.get("测试点名称") or "").strip()
@@ -237,6 +243,10 @@ def main():
             if not re.fullmatch(r"TC-\d+", tcid):
                 failures.append({"record": tcid or "(空)", "field": "编号", "anchor": "-", "reason": "TC 编号格式非法（应为 TC-数字）"})
                 continue
+            if tcid in tc_ids:
+                failures.append({"record": tcid, "field": "编号", "anchor": "-", "reason": "TC 编号重复（编号永久唯一，不得复用）"})
+                continue
+            tc_ids.add(tcid)
             ref_raw = (r.get("关联TP") or "").strip()
             ref, _, name_seg = ref_raw.partition(" ")
             ref = ref.strip()
