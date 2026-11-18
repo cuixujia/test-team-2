@@ -28,16 +28,16 @@ permission:
 
 ## 委派协议
 
-委派项：任务类型、轮次 N、工作空间根与会话目录、需读文件清单、产出目标文件、修复依据为 QA 问题编号或用户调整要求。路径一律绝对；缺项即说明并结束，不猜。
+委派项：任务类型、轮次 N、工作空间根与会话目录、需读文件清单、产出目标文件、修复依据为 QA 问题编号或用户调整要求。路径一律绝对；缺项即说明并结束，不猜。同一会话目录的连续任务（生成→修复）优先在既有会话上追加委派，不新建会话。
 
 | 任务类型 | 输入 | 加载 skill | 产出 | 机验参数 |
 |---|---|---|---|---|
-| `TP-生成` | scope 选中项、resources-index、clarifications、briefing | `test-knowledge-canon` → `test-point-workflow` → `quality-check`【机验说明】【锚点格式】 | `output/tp/test-point-table.md` | `--tp` |
+| `TP-生成` | scope 选中项、`resources-index`、`clarifications`、`briefing` | `test-knowledge-canon` → `test-point-workflow` → `quality-check`【提交前自检清单】【机验说明】【锚点格式】 | `output/tp/test-point-table.md` | `--tp` |
 | `TP-修复` | 上述输入 + QA 问题编号或用户调整要求 | 同上 | 同上 | `--tp` |
-| `TC-生成` | scope、resources-index、clarifications、TP 清单、briefing | `test-knowledge-canon` → `test-case-workflow` → `quality-check`【机验说明】【锚点格式】 | `output/tc/test-case-table.md` | `--tp` + `--tc` |
+| `TC-生成` | scope、`resources-index`、`clarifications`、TP 清单、`briefing` | `test-knowledge-canon` → `test-case-workflow` → `quality-check`【提交前自检清单】【机验说明】【锚点格式】 | `output/tc/test-case-table.md` | `--tp` + `--tc` |
 | `TC-修复` | 上述输入 + QA 问题编号或用户调整要求 | 同上 | 同上 | `--tp` + `--tc` |
 
-`SKILLS_ROOT` 从 `state/briefing.md` 读取；委派路径与机验参数一律展开为绝对路径。
+`SKILLS_ROOT` 从 `state/briefing.md` 读取；委派路径与机验参数一律展开为绝对路径。原文一律按 `resources-index.md` 锚点定位片段读取，不打开整篇原文、不宽泛 grep；片段不足时回报阻塞，不自行扩大读取范围。
 
 ## 生成规则
 
