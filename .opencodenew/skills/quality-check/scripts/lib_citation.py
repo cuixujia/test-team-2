@@ -13,7 +13,6 @@ DOCX_POS = re.compile(r"^(?P<file>.+?\.docx)#(?P<section>.+)$", re.IGNORECASE)
 MD_POS = re.compile(r"^(?P<file>.+?):(?P<start>\d+)(?:-(?P<end>\d+))?$")
 CLAR_REF = re.compile(r"^(C-\d+)(\(默认\))?$")
 SEP_LINE = re.compile(r"^:?-{3,}:?$")
-MAX_QUOTE = 50
 
 
 def norm(s):
@@ -33,12 +32,7 @@ def split_anchor(anchor):
 
 
 def core_quote(q):
-    q = q.strip()
-    truncated = False
-    while q and q[-1] in ".…":
-        truncated = True
-        q = q[:-1]
-    return q, truncated
+    return q.strip().rstrip(".…")
 
 
 def anchors_of(cell):
@@ -150,26 +144,14 @@ def xlsx_cell(path, sheet, coord):
         return None, "未找到单元格：{}".format(coord)
 
 
-def check_quote_common(quote):
-    if not quote.strip():
-        return "摘抄为空"
-    core, _truncated = core_quote(quote)
-    if not core:
-        return "摘抄为空"
-    if len(core) > MAX_QUOTE:
-        return "摘抄超过50字（{}字）".format(len(core))
-    return None
-
-
 def check_anchor(anchor, roots):
     parsed = split_anchor(anchor)
     if parsed is None:
         return "锚点格式非法（应为 位置 => \"摘抄\"）"
     pos, quote = parsed
-    err = check_quote_common(quote)
-    if err:
-        return err
-    core, truncated = core_quote(quote)
+    core = core_quote(quote)
+    if not core:
+        return "摘抄为空"
     core_n = norm(core)
 
     mx = XLSX_POS.match(pos)
@@ -290,10 +272,14 @@ def parse_md_tables(text):
 
 
 def table_with_columns(text, required):
-    for header, rows in parse_md_tables(text):
-        if all(col in header for col in required):
-            return header, rows
-    return None, None
+    """返回所有含必需列的表格，行合并为一张。
+    澄清台账按两道澄清分两表或三表落盘，列相同，需全部读取以拿全 C 编号。"""
+    matched = [(h, r) for h, r in parse_md_tables(text) if all(col in h for col in required)]
+    if not matched:
+        return None, None
+    header = matched[0][0]
+    rows = [row for _h, body in matched for row in body]
+    return header, rows
 
 
 def table_fragment_count(text):

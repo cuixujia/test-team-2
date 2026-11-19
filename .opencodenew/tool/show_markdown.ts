@@ -1,6 +1,6 @@
 import { tool } from "@opencode-ai/plugin"
 import { statSync } from "node:fs"
-import { resolve } from "node:path"
+import { isAbsolute, resolve } from "node:path"
 
 export default tool({
   description:
@@ -8,9 +8,12 @@ export default tool({
   args: {
     path: tool.schema
       .string()
-      .describe("markdown 文件的绝对路径，必须以 / 开头且已存在，扩展名为 .md"),
+      .describe("markdown 文件的绝对路径，已存在且扩展名为 .md"),
   },
   async execute(args) {
+    if (!isAbsolute(args.path)) {
+      throw new Error(`需要绝对路径：${args.path}`)
+    }
     const p = resolve(args.path)
     if (!p.endsWith(".md")) {
       throw new Error(`仅支持 .md 文件：${args.path}`)

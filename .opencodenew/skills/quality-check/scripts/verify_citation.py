@@ -1,4 +1,21 @@
 #!/usr/bin/env python3
+"""机验：校验锚点真实性、表格结构、值域、澄清引用与数量守恒。
+
+用法：
+  python3 verify_citation.py --docs <原文根> [--docs <根2>] \
+      (--index <资源索引> | --tp <TP清单> | --tc <TC清单>) \
+      [--clar <澄清表>] [--out citation-result*.json]
+
+  --docs   原文检索根目录，可重复
+  --index  scope/resources-index.md，验索引锚点
+  --tp     output/tp/test-point-table.md，验 TP；与 --tc 同传时供交叉校验
+  --tc     output/tc/test-case-table.md，验 TC
+  --clar   state/clarifications.md，校验 C 编号引用
+  --out    结果 JSON 落盘路径；省略则只打印到 stdout
+
+退出码：0 无失败 / 1 有失败 / 2 用法或致命错误。
+输出字段：ok、summary、failures、warnings。
+"""
 import argparse
 import json
 import os
@@ -12,6 +29,7 @@ from lib_citation import (
     anchors_of,
     broken_table_rows,
     check_anchor,
+    parse_md_tables,
     table_fragment_count,
     table_with_columns,
 )
@@ -20,6 +38,7 @@ TP_REQUIRED = ["编号", "关联业务功能", "测试点名称", "类型", "测
 TC_REQUIRED = ["编号", "关联业务功能", "关联TP", "用例名称", "用例类型", "测试方法", "前置条件", "测试数据", "操作步骤", "预期结果", "依据类型", "澄清依据", "出处锚点"]
 CLAR_REQUIRED = ["编号", "来源", "问题", "影响面", "默认建议", "答复", "状态"]
 OUT_NAME = re.compile(r"^citation-result.*\.json$")
+INDEX_ANCHOR_LINE = re.compile(r'^\s*[-*]\s*锚点\s*[:：]\s*(.+)$')
 
 # 测试维度 → 《测试维度定义》「二、测试维度明细」合法小类集（单值；维度-小类组合合法性机验依据）
 TP_DIMENSIONS = {
@@ -42,7 +61,7 @@ BASIS_TYPES = {"原文依据", "方法论补充"}
 
 def load_rows(path, required, kind):
     if not path:
-        return None, None, []
+        return None, []
     if not os.path.isfile(path):
         fatal(["{} 文件不存在：{}".format(kind, path)])
     with open(path, encoding="utf-8", errors="replace") as fh:
@@ -59,15 +78,16 @@ def load_rows(path, required, kind):
         }
         for ln, _c in broken_table_rows(text)
     ]
+    matched = sum(1 for h, _ in parse_md_tables(text) if all(col in h for col in required))
     frag = table_fragment_count(text)
-    if frag > 1:
+    if frag > matched:
         warns.append(
             {
                 "record": kind + " 表格结构",
-                "reason": "文件解析出 {} 个表格片段——首表之外的数据行已静默跳过（疑似断行后的孤立片段，应修复断行并整表重排）".format(frag),
+                "reason": "文件解析出 {} 个表格片段，其中 {} 个含必需列——其余 {} 个片段的数据行未被读取（疑似断行后的孤立片段，应修复断行并整表重排）".format(frag, matched, frag - matched),
             }
         )
-    return header, rows, warns
+    return rows, warns
 
 
 def fatal(messages):
@@ -80,6 +100,25 @@ def fatal(messages):
     }
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     sys.exit(2)
+
+
+def load_index_anchors(path):
+    if not path:
+        return []
+    if not os.path.isfile(path):
+        fatal(["resources-index 文件不存在：{}".format(path)])
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        text = fh.read()
+    if not text.strip():
+        fatal(["resources-index 文件为空：{}".format(path)])
+    anchors = []
+    for line in text.splitlines():
+        m = INDEX_ANCHOR_LINE.match(line)
+        if m:
+            anchors.extend(anchors_of(m.group(1)))
+    if not anchors:
+        fatal(["resources-index 未解析到任何锚点（格式应为 `- 锚点：文件名:起始行-结束行 => \"摘抄\"`）"])
+    return anchors
 
 
 def check_clar_ref(value, clar_set, record, failures, has_clar):
@@ -110,6 +149,7 @@ def main():
     ap.add_argument("--docs", action="append", required=True, help="原文检索根目录，可重复")
     ap.add_argument("--tp", help="tp/test-point-table.md 路径")
     ap.add_argument("--tc", help="tc/test-case-table.md 路径")
+    ap.add_argument("--index", help="scope/resources-index.md 路径")
     ap.add_argument("--clar", help="state/clarifications.md 路径")
     ap.add_argument("--out", help="结果 JSON 输出路径（文件名须为 citation-result*.json）")
     args = ap.parse_args()
@@ -117,27 +157,35 @@ def main():
     if args.out and not OUT_NAME.match(os.path.basename(args.out)):
         fatal(["--out 文件名必须匹配 citation-result*.json，收到：{}".format(os.path.basename(args.out))])
 
-    if not args.tp and not args.tc:
-        fatal(["至少提供 --tp 或 --tc 之一"])
+    if not args.tp and not args.tc and not args.index:
+        fatal(["至少提供 --tp / --tc / --index 之一"])
 
-    docs = [d for d in (args.docs or [])]
-    if not docs:
-        fatal(["至少需要一个 --docs 目录"])
+    docs = args.docs
 
     failures = []
     warnings = []
-    summary = {"tp_rows": 0, "tc_rows": 0, "tp_methodology": 0, "tc_methodology": 0, "checks": 0, "failures": 0, "warnings": 0}
+    summary = {"index_anchors": 0, "tp_rows": 0, "tc_rows": 0, "tp_methodology": 0, "tc_methodology": 0, "checks": 0, "failures": 0, "warnings": 0}
 
     tp_ids = set()
+    tc_ids = set()
     tp_names = {}
     tp_funcs = {}
     tp_tc_count = {}
     covered = set()
 
+    if args.index:
+        idx_anchors = load_index_anchors(args.index)
+        summary["index_anchors"] = len(idx_anchors)
+        for a in idx_anchors:
+            summary["checks"] += 1
+            reason = check_anchor(a, docs)
+            if reason:
+                failures.append({"record": "resources-index", "field": "锚点", "anchor": a, "reason": reason})
+
     clar_set = set()
     has_clar = False
     if args.clar:
-        _h, crows, w = load_rows(args.clar, CLAR_REQUIRED, "clarifications")
+        crows, w = load_rows(args.clar, CLAR_REQUIRED, "clarifications")
         warnings.extend(w)
         if crows is not None:
             has_clar = True
@@ -147,13 +195,16 @@ def main():
                     clar_set.add(cid)
 
     if args.tp:
-        _h, tp_rows, w = load_rows(args.tp, TP_REQUIRED, "TP清单")
+        tp_rows, w = load_rows(args.tp, TP_REQUIRED, "TP清单")
         warnings.extend(w)
         summary["tp_rows"] = len(tp_rows)
         for r in tp_rows:
             tid = (r.get("编号") or "").strip()
             if not re.fullmatch(r"TP-\d+", tid):
                 failures.append({"record": tid or "(空)", "field": "编号", "anchor": "-", "reason": "TP 编号格式非法（应为 TP-数字）"})
+                continue
+            if tid in tp_ids:
+                failures.append({"record": tid, "field": "编号", "anchor": "-", "reason": "TP 编号重复（编号永久唯一，不得复用）"})
                 continue
             tp_ids.add(tid)
             tp_names[tid] = (r.get("测试点名称") or "").strip()
@@ -184,7 +235,7 @@ def main():
                 failures.append({"record": tid, "field": "用例展开重点", "anchor": "-", "reason": "用例展开重点为空（须填写可独立判定的展开分支；项数仅作展开充分性建议，见 test-point-workflow「落盘模板」）"})
 
     if args.tc:
-        _h, tc_rows, w = load_rows(args.tc, TC_REQUIRED, "TC清单")
+        tc_rows, w = load_rows(args.tc, TC_REQUIRED, "TC清单")
         warnings.extend(w)
         summary["tc_rows"] = len(tc_rows)
         for r in tc_rows:
@@ -192,6 +243,10 @@ def main():
             if not re.fullmatch(r"TC-\d+", tcid):
                 failures.append({"record": tcid or "(空)", "field": "编号", "anchor": "-", "reason": "TC 编号格式非法（应为 TC-数字）"})
                 continue
+            if tcid in tc_ids:
+                failures.append({"record": tcid, "field": "编号", "anchor": "-", "reason": "TC 编号重复（编号永久唯一，不得复用）"})
+                continue
+            tc_ids.add(tcid)
             ref_raw = (r.get("关联TP") or "").strip()
             ref, _, name_seg = ref_raw.partition(" ")
             ref = ref.strip()
@@ -224,8 +279,9 @@ def main():
             check_basis_type(r, tcid, failures, summary, "tc_methodology")
             check_clar_ref(r.get("澄清依据"), clar_set, tcid, failures, has_clar)
 
-    for tid in sorted(tp_ids - covered):
-        warnings.append({"record": tid, "reason": "该 TP 无任何关联用例（覆盖缺口，需人工确认）"})
+    if args.tc:
+        for tid in sorted(tp_ids - covered):
+            warnings.append({"record": tid, "reason": "该 TP 无任何关联用例（覆盖缺口，需人工确认）"})
 
     # 数量守恒：逐 TP 直属 TC 数 M >= 2；M=0 由覆盖缺口 warning 承载，不判 failures
     if args.tp and args.tc:
