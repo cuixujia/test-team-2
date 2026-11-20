@@ -99,8 +99,6 @@ TP 与 TC 语义检视共用。
 | TC 生成与修复 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/test-point-table.md --tc <会话>/output/tc/test-case-table.md --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
 | TC 质检 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/test-point-table.md --tc <会话>/output/tc/test-case-table.md --clar <会话>/state/clarifications.md` |
 
-数量守恒只在传入 `--tc` 时检查。TP 阶段不再输出「无关联用例」warning。
-
 ## 资料域
 
 资料域只对索引质量判收敛。资料矛盾与依据缺口走本节末尾的待澄清登记，不进问题清单，不阻塞索引冻结。

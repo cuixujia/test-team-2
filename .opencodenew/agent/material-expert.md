@@ -7,8 +7,16 @@ permission:
   grep: allow
   bash:
     "*": deny
-    "*verify_citation.py*": allow
-    "sed*": deny
+    "ls*": allow
+    "wc*": allow
+    "cat*": allow
+    "head*": allow
+    "tail*": allow
+    "sed*": allow
+    "grep*": allow
+    "find*": allow
+    "echo*": allow
+    "python3*": allow
   write:
     "**": deny
     "**/scope/**": allow
