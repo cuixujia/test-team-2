@@ -20,13 +20,13 @@ permission:
     "python3*": allow
   write:
     "**": deny
-    "**/output/tp/**": allow
-    "**/output/tc/**": allow
+    "**/output/tp/parts/**": allow
+    "**/output/tc/parts/**": allow
     "**/state/citation-result.json": allow
   edit:
     "**": deny
-    "**/output/tp/**": allow
-    "**/output/tc/**": allow
+    "**/output/tp/parts/**": allow
+    "**/output/tc/parts/**": allow
     "**/state/citation-result.json": allow
   subagent:
     "*": deny
@@ -38,13 +38,15 @@ permission:
 
 ## 委派协议
 
-委派项：任务类型、任务目标、工作空间根与会话目录、需读文件路径、产出目标文件；修复任务另给轮次与修复依据。路径一律绝对，缺项即说明并结束。收到前序结论摘要时据此续做，不重读前序文件。
+委派项：任务类型、任务目标、工作空间根与会话目录、处理的功能点、需读文件路径、产出目标文件、编号清单；修复任务另给轮次与修复依据。路径一律绝对，缺项即说明并结束。收到前序结论摘要时据此续做，不重读前序文件。
+
+编号清单由经理编排下发，逐条列明本次要用的编号，如 `TP-001`、`TP-002`、`TC-001`、`TC-002`。按产出顺序逐一取用清单中的编号，不自行选号、不重排、不补号；清单用尽仍不足即回报阻塞。
 
 | 任务类型 | 加载 skill | 产出 |
 |---|---|---|
-| `TP-生成` | `test-knowledge-canon`、`test-point-workflow`、`quality-check` | `output/tp/test-point-table.md` |
+| `TP-生成` | `test-knowledge-canon`、`test-point-workflow`、`quality-check` | `output/tp/parts/` 下委派文件 |
 | `TP-修复` | `test-point-workflow`、`quality-check` | 同上 |
-| `TC-生成` | `test-point-workflow`、`test-case-workflow`、`quality-check` | `output/tc/test-case-table.md` |
+| `TC-生成` | `test-point-workflow`、`test-case-workflow`、`quality-check` | `output/tc/parts/` 下委派文件 |
 | `TC-修复` | `test-point-workflow`、`test-case-workflow`、`quality-check` | 同上 |
 
 ### 任务执行轮次约束
@@ -52,7 +54,7 @@ permission:
 续接会话只补本轮新增内容：已加载的 skill、已读过的文件不再读，只读委派路径中本轮新增的文件。原文按索引定位相关章节回读，不读索引范围外章节，不得仅凭清单或索引摘要推导具体取值、字段、状态、角色与文案。
 
 四个任务均四轮：
-1. 第 1 轮：同一步并行加载本任务所需 skill、读取委派路径，并按索引回读相关章节原文；已加载项按上条跳过。
+1. 第 1 轮：同一步并行加载本任务所需 skill、读取委派路径，并按索引回读委派功能点相关章节原文；已加载项按上条跳过。
 2. 第 2 轮：写或修复 TP/TC 清单，合并为一次落盘。
 3. 第 3 轮：按 `quality-check`【机验说明】跑一次标准命令；失败时只修指定项并复跑一次，通过后锁定。
 4. 第 4 轮：回报摘要并结束。
@@ -84,7 +86,7 @@ TC 是 TP 的纯展开，展开所需的具体取值、字段、状态、角色�
 
 ## 落盘
 
-`write` 只用于新建文件或首次落盘。修复用 `edit` 指定行，数据行按功能分段追加，最多两次 `edit`；多处改动合并在同一步，禁止逐条多轮。
+`write` 只用于新建文件或首次落盘。修复用 `edit` 指定行，数据行按功能分段追加，最多两次 `edit`；多处改动合并在同一步，禁止逐条多轮。编号按委派编号清单逐条取用。
 
 ## 回报协议
 

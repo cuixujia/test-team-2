@@ -40,10 +40,10 @@ Y 或 N，列剩余阻塞与重大项
 
 | 字段 | 要求 |
 | --- | --- |
-| 小节标题 | `## 材料R{N}` / `## TP-R{N}` / `## TC-R{N}`；补充轮用 `## TP-补充` / `## TC-补充` |
-| 检查范围 | 本轮实际检视的资料或条目，分批时逐批列出 |
+| 小节标题 | `## 材料R{N}` / `## TP-B{批号}-R{N}` / `## TC-B{批号}-R{N}`；补充轮用 `## TP-B{批号}-补充` / `## TC-B{批号}-补充`。分片报告每片只含一个批次 |
+| 检查范围 | 本轮实际检视的资料或条目，写本批号与所选功能点；不跨批 |
 | 域边界 | 每份报告只评价本域产物。冻结产物作为输入事实，不作为问题对象。TC 报告不得评价或要求修改 TP，TP 报告不得评价或要求修改资料索引，材料报告只评价索引 |
-| 问题清单 | 附证据锚点。编号用 `Q-M-R{N}-{seq}`、`Q-TP-R{N}-{seq}`、`Q-TC-R{N}-{seq}`。问题描述只写当前域条目和当前域可执行修正 |
+| 问题清单 | 附证据锚点。编号用 `Q-M-R{N}-{seq}`、`Q-TP-B{批号}-R{N}-{seq}`、`Q-TC-B{批号}-R{N}-{seq}`，批号入编号以保证单份 repair-log 内全局唯一。问题描述只写当前域条目和当前域可执行修正 |
 | 对照表复检 | R2+ 填写，只查问题清单中的编号 |
 | 新增条目检查 | R2+ 填写，只查本轮新增条目 |
 | 收敛判定 | 阻塞与重大均为 0 才判 Y。当前域无法修复的冲突写清原因并呈用户决策，不派修复。判定语写「阻塞 N / 重大 N / 一般 N；收敛判定 Y/N；一句理由」 |
@@ -84,7 +84,9 @@ TP 与 TC 语义检视共用。
 
 `verify_citation.py` 检查锚点、表格、值域、关联、澄清编号与数量守恒。退出码 0 无失败，1 有失败，2 用法或致命错误。payload 含 `ok`、`summary`、`failures`、`warnings`、`fatal_messages`。
 
-执行次数：每轮每产物只跑一次。命令按下方表格原样执行，脚本用绝对路径，路径不加引号，不设 shell 变量，不加 `; echo` 等拼接；不读脚本源码，不自建检查脚本。生成或修复任务带 `--out` 落盘结果，质检任务不带 `--out`。通过后即锁定，禁止再次执行；R2 及以后复检不跑机验，只按 `repair-log.md` 核对改动行段。产物被修改时由修改方重跑一次，其他角色不得复跑。
+执行次数：每轮每产物只跑一次。命令按下方表格原样执行，脚本用绝对路径，路径不加引号，不设 shell 变量，不加 `; echo` 等拼接；不读脚本源码，不自建检查脚本。生成或修复任务带 `--out`，质检任务不带；`--out` 仅作命令标识，结果由脚本打印到 stdout，不落盘。通过后即锁定，禁止再次执行；R2 及以后复检不跑机验，只按 `repair-log.md` 核对改动行段。产物被修改时由修改方重跑一次，其他角色不得复跑。
+
+分片机验：`--tp`、`--tc` 各只传一个文件，不接多分片。单批 TP 质检传本批 `tp-B{批号}.md` 一个文件；单批 TC 质检传本批 `tc-B{批号}.md`，并附带本批 `tp-B{批号}.md` 作关联与数量守恒校验，不检 TP 内容本身。
 
 失败处理：生成或修复任务 `failures` 非零，只修指定项并复跑一次；质检任务 `failures` 非零，逐条记阻塞并判未收敛，不修产物、不复跑。`exit 2` 回报阻塞。
 
@@ -92,10 +94,10 @@ TP 与 TC 语义检视共用。
 | --- | --- |
 | 索引生成 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --index <会话>/scope/resources-index.md --out <会话>/state/citation-result.json` |
 | 索引质检 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --index <会话>/scope/resources-index.md` |
-| TP 生成 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/test-point-table.md --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
-| TP 质检 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/test-point-table.md --clar <会话>/state/clarifications.md` |
-| TC 生成与修复 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/test-point-table.md --tc <会话>/output/tc/test-case-table.md --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
-| TC 质检 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/test-point-table.md --tc <会话>/output/tc/test-case-table.md --clar <会话>/state/clarifications.md` |
+| TP 生成（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/parts/tp-B{批号}.md --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
+| TP 质检（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/parts/tp-B{批号}.md --clar <会话>/state/clarifications.md` |
+| TC 生成与修复（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/parts/tp-B{批号}.md --tc <会话>/output/tc/parts/tc-B{批号}.md --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
+| TC 质检（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/parts/tp-B{批号}.md --tc <会话>/output/tc/parts/tc-B{批号}.md --clar <会话>/state/clarifications.md` |
 
 ## 资料域
 

@@ -20,27 +20,29 @@ permission:
     "python3*": allow
   write:
     "**": deny
-    "**/output/reports/**": allow
+    "**/output/reports/qa-materials.md": allow
+    "**/output/reports/parts/**": allow
   edit:
     "**": deny
-    "**/output/reports/**": allow
+    "**/output/reports/qa-materials.md": allow
+    "**/output/reports/parts/**": allow
   subagent:
     "*": deny
 ---
 
 # 质检专家
 
-一次委派只检一域。只检不修，只写 `output/reports/` 下三份报告。
+一次委派只检一域。只检不修，只写 `output/reports/` 下委派报告。
 
 ## 委派协议
 
-委派项：任务类型、轮次、需读文件路径（含 `project-docs` 原文路径）、报告目标文件、repair-log 复检小节名。缺项即说明并结束。
+委派项：任务类型、轮次、需读文件路径（含 `project-docs` 原文路径）、报告目标文件、repair-log 复检小节名、问题编号前缀。缺项即说明并结束。问题编号前缀用于本次报告与 repair-log 的记录，保证编号唯一；repair-log 复检小节名用于 R2+ 定位改动行段。
 
 | 任务类型 | 加载 skill | 报告目标 | repair-log 小节 |
 |---|---|---|---|
 | 材料质检 | `quality-check` | `output/reports/qa-materials.md` | `## 材料R{n}` |
-| TP 质检 | `quality-check`、`test-point-workflow` | `output/reports/qa-tp.md` | `## TP-R{n}` / `## TP-补充` |
-| TC 质检 | `quality-check`、`test-case-workflow`、`test-point-workflow` | `output/reports/qa-tc.md` | `## TC-R{n}` / `## TC-补充` |
+| TP 质检 | `quality-check`、`test-point-workflow` | `output/reports/parts/` 下委派文件 | 委派指定的小节 |
+| TC 质检 | `quality-check`、`test-case-workflow`、`test-point-workflow` | `output/reports/parts/` 下委派文件 | 委派指定的小节 |
 
 只加载当前域需要的 skill。禁止加载 `test-knowledge-canon`，禁止加载无关域生成 skill。
 
@@ -62,11 +64,11 @@ R2+ 三轮（不跑机验）：
 
 ## 工作步骤
 
-R1 检全部条目并按索引回读相关章节原文；R2 只读 repair-log 中记录的改动行号及索引中对应章节原文，禁止读取整表。
+R1 检委派产物全部条目并按索引回读相关章节原文；R2 只读 repair-log 中复检小节记录的改动行号及索引中对应章节原文，禁止读取整表。
 
 1. 机验：按 `quality-check`【机验说明】执行，通过后取 `failures` 与 `warnings`。
 2. 语义验：以回读原文为据，按 `quality-check`【语义判据】和对应域判据只判当前域产物。冻结产物作为输入事实，不作为问题对象。
-3. 写报告：按 `quality-check`【报告结构】写报告。
+3. 写报告：按 `quality-check`【报告结构】写报告，问题编号用委派前缀。
 
 ## 回报协议
 

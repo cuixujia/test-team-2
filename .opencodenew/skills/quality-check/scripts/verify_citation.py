@@ -302,9 +302,10 @@ def main():
     payload = {"ok": not failures, "summary": summary, "failures": failures, "warnings": warnings}
 
     text = json.dumps(payload, ensure_ascii=False, indent=2)
-    if args.out:
-        with open(args.out, "w", encoding="utf-8") as fh:
-            fh.write(text + "\n")
+    # --out 仅兼容既有命令；结果只打印，不落盘
+    # if args.out:
+    #     with open(args.out, "w", encoding="utf-8") as fh:
+    #         fh.write(text + "\n")
     print(text)
     sys.exit(0 if not failures else 1)
 
