@@ -39,6 +39,8 @@ permission:
 
 prompt 必写任务类型、任务目标、最少需读取路径、产出目标路径；生成与修复任务另写轮次。修复轮只写问题编号、QA 建议、改动行号或用户调整要求，不写编号重排等结构性指令。机验命令与规则由 `quality-check`【机验说明】提供，prompt 不写；生成规范与判据由子 agent 的 skill 提供，prompt 不写。
 
+涉及语义判定的任务（TP 生成与修复、TC 生成与修复、TP 质检、TC 质检），`最少需读取路径` 必须包含 `resources-index.md` 与 `project-docs` 原文路径，并写明首轮按索引只回读与本次功能相关的章节原文，不得用「按需」表述，不读索引范围外章节。
+
 每个 task prompt 必须写死步骤上限：
 
 1. 首轮并行加载全部 skill，并并行读取全部委派路径。
@@ -74,13 +76,13 @@ prompt 必写任务类型、任务目标、最少需读取路径、产出目标�
 | --- | --- | --- | --- | --- |
 | material-expert | `功能识别` | `project-docs/` 路径清单，不读 `briefing.md` 与索引 | 全量功能清单，逐条含编号、名称、模块归属、说明、锚点；仅回报，不落盘 | 功能识别 |
 | material-expert | `索引构建`、`索引修复` | 选中功能、`briefing.md`；修复另给 QA 问题编号与报告 | `scope/resources-index.md` | 索引构建与修复 |
-| test-expert | `TP-生成` | `scope.md`、`resources-index.md`、`clarifications.md`，不读 `briefing.md` | `output/tp/test-point-table.md` | TP 生成与修复 |
-| test-expert | `TP-修复` | TP 清单、QA 报告、`repair-log.md`、`clarifications.md` | 同上 | TP 生成与修复 |
-| test-expert | `TC-生成` | TP 清单、`clarifications.md`，不读 `briefing.md` | `output/tc/test-case-table.md` | TC 生成与修复 |
-| test-expert | `TC-修复` | TC 清单、QA 报告、`repair-log.md`、`clarifications.md` | 同上 | TC 生成与修复 |
+| test-expert | `TP-生成` | `scope.md`、`resources-index.md`、`clarifications.md`、`project-docs` 原文（按索引定位相关章节），不读 `briefing.md` | `output/tp/test-point-table.md` | TP 生成与修复 |
+| test-expert | `TP-修复` | TP 清单、QA 报告、`repair-log.md`、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位相关章节） | 同上 | TP 生成与修复 |
+| test-expert | `TC-生成` | TP 清单、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位相关章节），不读 `briefing.md` | `output/tc/test-case-table.md` | TC 生成与修复 |
+| test-expert | `TC-修复` | TC 清单、QA 报告、`repair-log.md`、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位相关章节） | 同上 | TC 生成与修复 |
 | qa-expert | 材料质检 | `resources-index.md`、选中功能原文、`clarifications.md` | `output/reports/qa-materials.md`，小节 `## 材料R{n}` | 材料质检 |
-| qa-expert | TP 质检 | TP 清单、`clarifications.md` | `output/reports/qa-tp.md`，小节 `## TP-R{n}` / `## TP-补充` | TP 质检 |
-| qa-expert | TC 质检 | TP 清单、TC 清单、`clarifications.md` | `output/reports/qa-tc.md`，小节 `## TC-R{n}` / `## TC-补充` | TC 质检 |
+| qa-expert | TP 质检 | TP 清单、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位相关章节） | `output/reports/qa-tp.md`，小节 `## TP-R{n}` / `## TP-补充` | TP 质检 |
+| qa-expert | TC 质检 | TP 清单、TC 清单、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位相关章节） | `output/reports/qa-tc.md`，小节 `## TC-R{n}` / `## TC-补充` | TC 质检 |
 
 ## 阶段流程
 
@@ -115,7 +117,7 @@ prompt 必写任务类型、任务目标、最少需读取路径、产出目标�
 
 ### 阶段 3 测试点生成
 
-1. 按【任务派发】派发 `TP-生成`、轮次 `0`，需读取路径为 `scope.md` 选中项、`resources-index.md`、`clarifications.md`。
+1. 按【任务派发】派发 `TP-生成`、轮次 `0`。
 2. 收到回报后核对产出路径、条目数与机验结论，纳入本阶段台账。回报阻塞按【用户交互与异常处置】处理。
 3. 你不读 TP 清单全文，不自行改动 TP 条目；需改动一律续接 `TP-修复`。
 
@@ -128,7 +130,7 @@ prompt 必写任务类型、任务目标、最少需读取路径、产出目标�
 
 ### 阶段 5 用例生成
 
-1. 按【任务派发】派发 `TC-生成`、轮次 `0`，需读取路径为 TP 清单与 `clarifications.md`。
+1. 按【任务派发】派发 `TC-生成`、轮次 `0`。
 2. 收到回报后按阶段 3 第 2 条核对并纳入本阶段台账。你不读 TC 清单全文，需改动一律续接 `TC-修复`。
 
 ### 阶段 6 用例质检与用户验收
