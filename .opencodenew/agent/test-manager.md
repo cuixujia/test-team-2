@@ -94,9 +94,9 @@ prompt 必写任务类型、任务目标、最少需读取路径、产出目标�
 | --- | --- | --- | --- | --- |
 | material-expert | `功能识别` | `project-docs/` 路径清单，不读 `briefing.md` 与索引 | 全量功能清单，逐条含编号、名称、模块归属、说明、锚点；仅回报，不落盘 | 功能识别 |
 | material-expert | `索引构建`、`索引修复` | 选中功能、`briefing.md`；修复另给 QA 问题编号与报告 | `scope/resources-index.md` | 索引构建与修复 |
-| test-expert | `TP-生成` | 批号、TP 编号清单、`scope.md`、`resources-index.md`、`clarifications.md`、`project-docs` 原文（按索引定位本批功能点章节），不读 `briefing.md` | `output/tp/parts/tp-B{批号}.md` | 本批 TP 生成与修复 |
+| test-expert | `TP-生成` | 批号、TP 编号清单、`scope.md`、`resources-index.md`、`clarifications.md`、`project-docs` 原文（按索引定位本批功能点章节），不读 `briefing.md` | `output/tp/parts/tp-B{批号}.json` | 本批 TP 生成与修复 |
 | test-expert | `TP-修复` | 批号、本批 TP 分片、QA 报告、`repair-log.md`、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位本批章节） | 同上 | 本批 TP 生成与修复 |
-| test-expert | `TC-生成` | 批号、TC 编号清单、本批 TP 分片、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位本批章节），不读 `briefing.md` | `output/tc/parts/tc-B{批号}.md` | 本批 TC 生成与修复 |
+| test-expert | `TC-生成` | 批号、TC 编号清单、本批 TP 分片、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位本批章节），不读 `briefing.md` | `output/tc/parts/tc-B{批号}.json` | 本批 TC 生成与修复 |
 | test-expert | `TC-修复` | 批号、本批 TC 分片与 TP 分片、QA 报告、`repair-log.md`、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位本批章节） | 同上 | 本批 TC 生成与修复 |
 | qa-expert | 材料质检 | `resources-index.md`、选中功能原文、`clarifications.md` | `output/reports/qa-materials.md`，小节 `## 材料R{n}` | 材料质检 |
 | qa-expert | TP 质检 | 批号、本批 TP 分片、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位本批章节） | `output/reports/parts/qa-tp-B{批号}.md`，小节 `## TP-B{批号}-R{n}` / `## TP-B{批号}-补充` | 本批 TP 质检 |
@@ -142,7 +142,7 @@ prompt 必写任务类型、任务目标、最少需读取路径、产出目标�
 ### 阶段 4 测试点质检与用户验收
 
 1. 按【批次规划与并发调度】逐批派发 TP 质检，各批 R1 写入本批 `output/reports/parts/qa-tp-B{批号}.md`，按标准循环按批收敛，同时执行不超过 3 个任务。
-2. 全部批次收敛后按【写权与落盘】调用 `merge_parts.py --session <会话目录> --kind tp` 生成 `output/tp/test-point-table.md`，仅拼接展示、不质检；随后用 `show_markdown` 传该汇总文件绝对路径作为关口凭证，呈【关口 3】。
+2. 全部批次收敛后按【写权与落盘】调用 `merge_parts.py --session <会话目录> --kind tp` 生成 `output/tp/test-point-table.json`，仅拼接展示、不质检；随后用 `show_markdown` 传该汇总文件绝对路径作为关口凭证，呈【关口 3】。
 3. 选「通过」→ 进阶段 5；选「中止」→ 停下，中止结论随本阶段台账落盘。
 4. 选「调整」→ 定位到目标批次小回路：补充条目须属该批 scope 选中功能，信息不全用 question 追问一次 → 派该批 `TP-修复`，轮次 `用户调整` → 据变更清单写 `## TP-B{批号}-补充` → 该批 QA 单轮复检 → 重新拼汇总视图 → 再呈关口 3，不占 3 轮上限。
 
@@ -154,7 +154,7 @@ prompt 必写任务类型、任务目标、最少需读取路径、产出目标�
 ### 阶段 6 用例质检与用户验收
 
 1. 按【批次规划与并发调度】逐批派发 TC 质检，各批 R1 写入本批 `output/reports/parts/qa-tc-B{批号}.md`，按标准循环按批收敛，同时执行不超过 3 个任务。
-2. 全部批次收敛后按【写权与落盘】调用 `merge_parts.py --session <会话目录> --kind tc` 生成 `output/tc/test-case-table.md`，仅拼接展示、不质检；随后用 `show_markdown` 传该汇总文件绝对路径作为关口凭证，呈【关口 4】。
+2. 全部批次收敛后按【写权与落盘】调用 `merge_parts.py --session <会话目录> --kind tc` 生成 `output/tc/test-case-table.json`，仅拼接展示、不质检；随后用 `show_markdown` 传该汇总文件绝对路径作为关口凭证，呈【关口 4】。
 3. 选「通过」→ 会话完成，结论随本阶段台账落盘；选「中止」→ 停下，中止结论随本阶段台账落盘。
 4. 选「调整」→ 定位到目标批次小回路：补充条目须挂在该批已有 TP 下，信息不全用 question 追问一次 → 派该批 `TC-修复`，轮次 `用户调整` → 据变更清单写 `## TC-B{批号}-补充` → 该批 QA 单轮复检 → 重新拼汇总视图 → 再呈关口 4，不占 3 轮上限。
 
@@ -213,13 +213,13 @@ prompt 必写任务类型、任务目标、最少需读取路径、产出目标�
     │   └── repair-log.md                # 修复对照表，单文件、按批号分节
     └── output/
         ├── tp/
-        │   ├── parts/                   # 分批分片，测试专家各写各的
-        │   │   └── tp-B01.md … tp-B06.md    # tp-B{批号}.md
-        │   └── test-point-table.md       # 汇总视图，merge_parts.py 拼，关口展示
+        │   ├── parts/                   # 分批分片，测试专家各写各的，JSON 格式
+        │   │   └── tp-B01.json … tp-B06.json  # tp-B{批号}.json
+        │   └── test-point-table.json     # 汇总视图，merge_parts.py 拼，关口展示
         ├── tc/
-        │   ├── parts/                   # 分批分片，测试专家各写各的
-        │   │   └── tc-B01.md … tc-B06.md    # tc-B{批号}.md
-        │   └── test-case-table.md        # 汇总视图，merge_parts.py 拼，关口展示
+        │   ├── parts/                   # 分批分片，测试专家各写各的，JSON 格式
+        │   │   └── tc-B01.json … tc-B06.json  # tc-B{批号}.json
+        │   └── test-case-table.json      # 汇总视图，merge_parts.py 拼，关口展示
         └── reports/                     # 质检报告
             ├── qa-materials.md          # 资料索引质检，含"待澄清问题"与"待澄清资料缺口"章节
             └── parts/                   # 分批质检分片，质检专家各写各的
@@ -331,7 +331,7 @@ prompt 必写任务类型、任务目标、最少需读取路径、产出目标�
 
 ## 阶段 5 完成
 - TC 分片落盘：output/tc/parts/，B01~B06 共 67 条
-- 汇总视图：output/tc/test-case-table.md，merge_parts.py 生成，仅展示不质检
+- 汇总视图：output/tc/test-case-table.json，merge_parts.py 生成，仅展示不质检
 ```
 
 | 字段 | 要求 |
@@ -368,8 +368,8 @@ prompt 必写任务类型、任务目标、最少需读取路径、产出目标�
 - 问题编号：Q-TP-B01-R1-01
 - 分级：重大
 - 修复动作：并入 TP-002，删除 TP-004，锚点已验真
-- 牵动条目：tp-B01.md，TP-002、TP-004
-- 改动行号：tp-B01.md:12-15
+- 牵动条目：tp-B01.json，TP-002、TP-004
+- 改动行号：tp-B01.json:12-15
 ```
 
 | 字段 | 要求 |

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""机验：校验锚点真实性、表格结构、值域、澄清引用与数量守恒。
+"""机验：校验锚点真实性、JSON 清单结构、值域、澄清引用与数量守恒。
 
 用法：
   python3 verify_citation.py --docs <原文根> [--docs <根2>] \
@@ -8,8 +8,8 @@
 
   --docs   原文检索根目录，可重复
   --index  scope/resources-index.md，验索引锚点
-  --tp     output/tp/test-point-table.md，验 TP；与 --tc 同传时供交叉校验
-  --tc     output/tc/test-case-table.md，验 TC
+  --tp     output/tp/test-point-table.json，验 TP；与 --tc 同传时供交叉校验
+  --tc     output/tc/test-case-table.json，验 TC
   --clar   state/clarifications.md，校验 C 编号引用
   --out    结果 JSON 落盘路径；省略则只打印到 stdout
 
@@ -27,8 +27,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib_citation import (
     CLAR_REF,
     anchors_of,
+    as_list,
     broken_table_rows,
     check_anchor,
+    load_json_list,
     parse_md_tables,
     table_fragment_count,
     table_with_columns,
@@ -36,6 +38,9 @@ from lib_citation import (
 
 TP_REQUIRED = ["编号", "关联业务功能", "测试点名称", "类型", "测试维度", "所属小类", "用例展开重点", "依据类型", "澄清依据", "出处锚点"]
 TC_REQUIRED = ["编号", "关联业务功能", "关联TP", "用例名称", "用例类型", "测试方法", "前置条件", "测试数据", "操作步骤", "预期结果", "依据类型", "澄清依据", "出处锚点"]
+# JSON 清单顶层条目数组的键名（与 test-point-workflow / test-case-workflow【清单结构】一致）
+TP_LIST_KEY = "测试点"
+TC_LIST_KEY = "测试用例"
 CLAR_REQUIRED = ["编号", "来源", "问题", "影响面", "默认建议", "答复", "状态"]
 OUT_NAME = re.compile(r"^citation-result.*\.json$")
 INDEX_ANCHOR_LINE = re.compile(r'^\s*[-*]\s*锚点\s*[:：]\s*(.+)$')
@@ -90,6 +95,20 @@ def load_rows(path, required, kind):
     return rows, warns
 
 
+def load_json_rows(path, required, kind, list_key):
+    """读取 JSON 清单（TP/TC 产物），结构非法即致命错误；条目缺字段由后续逐字段检查兜底。"""
+    if not path:
+        return None, []
+    if not os.path.isfile(path):
+        fatal(["{} 文件不存在：{}".format(kind, path)])
+    rows, err = load_json_list(path, list_key)
+    if err:
+        fatal(["{} {}：{}".format(kind, err, path)])
+    if rows and not all(col in rows[0] for col in required):
+        fatal(["{} 条目缺少必需字段，需要：{}".format(kind, "、".join(required))])
+    return rows, []
+
+
 def fatal(messages):
     payload = {
         "ok": False,
@@ -122,13 +141,10 @@ def load_index_anchors(path):
 
 
 def check_clar_ref(value, clar_set, record, failures, has_clar):
-    v = (value or "").strip()
-    if v in ("-", ""):
-        return
-    # 多值：用 ` ;; ` 分隔（与锚点列同风格），逐个校验格式与存在性
-    for seg in [p.strip() for p in v.split(";;") if p.strip()]:
+    # 多值：JSON 清单为数组，每项一个编号；空数组即无澄清依据
+    for seg in as_list(value):
         if not CLAR_REF.match(seg):
-            failures.append({"record": record, "field": "澄清依据", "anchor": seg, "reason": "澄清依据格式非法（应为 C-编号 或 C-编号(默认)，多值用 ;; 分隔）"})
+            failures.append({"record": record, "field": "澄清依据", "anchor": seg, "reason": "澄清依据格式非法（数组每项应为 C-编号 或 C-编号(默认)）"})
             continue
         cid = CLAR_REF.match(seg).group(1)
         if has_clar and cid not in clar_set:
@@ -195,7 +211,7 @@ def main():
                     clar_set.add(cid)
 
     if args.tp:
-        tp_rows, w = load_rows(args.tp, TP_REQUIRED, "TP清单")
+        tp_rows, w = load_json_rows(args.tp, TP_REQUIRED, "TP清单", TP_LIST_KEY)
         warnings.extend(w)
         summary["tp_rows"] = len(tp_rows)
         for r in tp_rows:
@@ -230,12 +246,12 @@ def main():
             tp_type = (r.get("类型") or "").strip()
             if tp_type not in TP_TYPES:
                 failures.append({"record": tid, "field": "类型", "anchor": tp_type or "(空)", "reason": "类型非法（仅 功能级/场景级）"})
-            focus = (r.get("用例展开重点") or "").strip()
+            focus = as_list(r.get("用例展开重点"))
             if not focus:
                 failures.append({"record": tid, "field": "用例展开重点", "anchor": "-", "reason": "用例展开重点为空（须填写可独立判定的展开分支；项数仅作展开充分性建议，见 test-point-workflow「落盘模板」）"})
 
     if args.tc:
-        tc_rows, w = load_rows(args.tc, TC_REQUIRED, "TC清单")
+        tc_rows, w = load_json_rows(args.tc, TC_REQUIRED, "TC清单", TC_LIST_KEY)
         warnings.extend(w)
         summary["tc_rows"] = len(tc_rows)
         for r in tc_rows:

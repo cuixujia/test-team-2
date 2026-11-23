@@ -76,17 +76,17 @@ TP 与 TC 语义检视共用。
 | xlsx | `文件名#Sheet名!单元格 => "摘抄"` |
 
 1. 摘抄须是定位行的连续原文，尽量 50 字以内。改写或缩合即问题。
-2. 摘抄不得含半角双引号、竖线或 ` => `。多锚点用 ` ;; ` 分隔，分隔符用 ASCII `-`。
+2. 摘抄不得含半角双引号、竖线或 ` => `。markdown 中多锚点用 ` ;; ` 分隔；JSON 清单中每个锚点为数组一项。分隔符用 ASCII `-`。
 3. md 行区间须 `1 ≤ 起始 ≤ 结束 ≤ 总行数`。docx 标题须对应 Heading 段落。禁裸格式 `文件名:行号`。
 4. 整行锚点不得用反引号包裹，否则摘抄以反引号结尾，解析判非法。
 
 ## 机验说明
 
-`verify_citation.py` 检查锚点、表格、值域、关联、澄清编号与数量守恒。退出码 0 无失败，1 有失败，2 用法或致命错误。payload 含 `ok`、`summary`、`failures`、`warnings`、`fatal_messages`。
+`verify_citation.py` 检查锚点、JSON 清单结构、值域、关联、澄清编号与数量守恒。退出码 0 无失败，1 有失败，2 用法或致命错误。payload 含 `ok`、`summary`、`failures`、`warnings`、`fatal_messages`。
 
 执行次数：每轮每产物只跑一次。命令按下方表格原样执行，脚本用绝对路径，路径不加引号，不设 shell 变量，不加 `; echo` 等拼接；不读脚本源码，不自建检查脚本。生成或修复任务带 `--out`，质检任务不带；`--out` 仅作命令标识，结果由脚本打印到 stdout，不落盘。通过后即锁定，禁止再次执行；R2 及以后复检不跑机验，只按 `repair-log.md` 核对改动行段。产物被修改时由修改方重跑一次，其他角色不得复跑。
 
-分片机验：`--tp`、`--tc` 各只传一个文件，不接多分片。单批 TP 质检传本批 `tp-B{批号}.md` 一个文件；单批 TC 质检传本批 `tc-B{批号}.md`，并附带本批 `tp-B{批号}.md` 作关联与数量守恒校验，不检 TP 内容本身。
+分片机验：`--tp`、`--tc` 各只传一个文件，不接多分片。单批 TP 质检传本批 `tp-B{批号}.json` 一个文件；单批 TC 质检传本批 `tc-B{批号}.json`，并附带本批 `tp-B{批号}.json` 作关联与数量守恒校验，不检 TP 内容本身。
 
 失败处理：生成或修复任务 `failures` 非零，只修指定项并复跑一次；质检任务 `failures` 非零，逐条记阻塞并判未收敛，不修产物、不复跑。`exit 2` 回报阻塞。
 
@@ -94,10 +94,10 @@ TP 与 TC 语义检视共用。
 | --- | --- |
 | 索引生成 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --index <会话>/scope/resources-index.md --out <会话>/state/citation-result.json` |
 | 索引质检 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --index <会话>/scope/resources-index.md` |
-| TP 生成（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/parts/tp-B{批号}.md --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
-| TP 质检（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/parts/tp-B{批号}.md --clar <会话>/state/clarifications.md` |
-| TC 生成与修复（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/parts/tp-B{批号}.md --tc <会话>/output/tc/parts/tc-B{批号}.md --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
-| TC 质检（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/parts/tp-B{批号}.md --tc <会话>/output/tc/parts/tc-B{批号}.md --clar <会话>/state/clarifications.md` |
+| TP 生成（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/parts/tp-B{批号}.json --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
+| TP 质检（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/parts/tp-B{批号}.json --clar <会话>/state/clarifications.md` |
+| TC 生成与修复（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/parts/tp-B{批号}.json --tc <会话>/output/tc/parts/tc-B{批号}.json --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
+| TC 质检（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/parts/tp-B{批号}.json --tc <会话>/output/tc/parts/tc-B{批号}.json --clar <会话>/state/clarifications.md` |
 
 ## 资料域
 

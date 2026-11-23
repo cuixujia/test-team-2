@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import zipfile
@@ -35,10 +36,38 @@ def core_quote(q):
     return q.strip().rstrip(".…")
 
 
-def anchors_of(cell):
-    if not cell:
+def as_list(value):
+    """多值字段归一化为列表：JSON 数组逐项取字符串；markdown 字符串按 ` ;; ` 拆分。`-` 与空值视为无。"""
+    if value is None:
         return []
-    return [a.strip() for a in cell.split(";;") if a.strip()]
+    if isinstance(value, list):
+        return [str(v).strip() for v in value if str(v).strip() not in ("", "-")]
+    return [p.strip() for p in str(value).split(";;") if p.strip() and p.strip() != "-"]
+
+
+def anchors_of(cell):
+    return as_list(cell)
+
+
+def load_json_list(path, list_key):
+    """读取 JSON 清单文件（顶层对象含 list_key 数组），返回 (条目数组, 错误信息)。"""
+    with open(path, encoding="utf-8-sig", errors="replace") as fh:
+        text = fh.read()
+    if not text.strip():
+        return None, "文件为空"
+    try:
+        data = json.loads(text)
+    except ValueError as exc:
+        return None, "JSON 解析失败：{}".format(exc)
+    if not isinstance(data, dict):
+        return None, "顶层须为对象（含 清单类型 与条目数组）"
+    rows = data.get(list_key)
+    if not isinstance(rows, list):
+        return None, "缺少 `{}` 数组".format(list_key)
+    for i, r in enumerate(rows, 1):
+        if not isinstance(r, dict):
+            return None, "`{}` 第 {} 条不是对象".format(list_key, i)
+    return rows, None
 
 
 def find_candidates(basename, roots):
