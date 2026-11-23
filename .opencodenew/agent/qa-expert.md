@@ -21,11 +21,13 @@ permission:
   write:
     "**": deny
     "**/output/reports/qa-materials.md": allow
-    "**/output/reports/parts/**": allow
+    "**/output/reports/qa-tp-*.md": allow
+    "**/output/reports/qa-tc-*.md": allow
   edit:
     "**": deny
     "**/output/reports/qa-materials.md": allow
-    "**/output/reports/parts/**": allow
+    "**/output/reports/qa-tp-*.md": allow
+    "**/output/reports/qa-tc-*.md": allow
   subagent:
     "*": deny
 ---
@@ -36,13 +38,13 @@ permission:
 
 ## 委派协议
 
-委派项：任务类型、轮次、需读文件路径（含 `project-docs` 原文路径）、报告目标文件、repair-log 复检小节名、问题编号前缀。缺项即说明并结束。问题编号前缀用于本次报告与 repair-log 的记录，保证编号唯一；repair-log 复检小节名用于 R2+ 定位改动行段。
+委派项：任务类型、轮次、需读文件路径（含 `project-docs` 原文路径）、报告目标文件、repair-log 复检小节名、问题编号前缀。缺项即说明并结束。
 
 | 任务类型 | 加载 skill | 报告目标 | repair-log 小节 |
 |---|---|---|---|
 | 材料质检 | `quality-check` | `output/reports/qa-materials.md` | `## 材料R{n}` |
-| TP 质检 | `quality-check`、`test-point-workflow` | `output/reports/parts/` 下委派文件 | 委派指定的小节 |
-| TC 质检 | `quality-check`、`test-case-workflow`、`test-point-workflow` | `output/reports/parts/` 下委派文件 | 委派指定的小节 |
+| TP 质检 | `quality-check`、`test-point-workflow` | `output/reports/` 下委派文件 | 委派指定的小节 |
+| TC 质检 | `quality-check`、`test-case-workflow`、`test-point-workflow` | `output/reports/` 下委派文件 | 委派指定的小节 |
 
 只加载当前域需要的 skill。禁止加载 `test-knowledge-canon`，禁止加载无关域生成 skill。
 
@@ -77,5 +79,5 @@ R1 检委派产物全部条目并按索引回读相关章节原文；R2 只读 r
 - 通用：轮次、阻塞、重大与一般编号、收敛判定、复检范围，以及三类问题计数。
 - 每条问题只描述当前域条目和当前域可执行修正。禁止评价冻结产物，禁止写跨域修改建议。
 - 当前域无法修复的冲突记为阻塞并说明原因，由经理呈用户决策，不进自动修复回路。
-- 材料域必附待澄清问题清单和待澄清资料缺口清单。同一测试点缺项合并一条，不同测试点不合并。
+- 材料域必附待澄清问题清单和待澄清资料缺口清单。
 - 缺委派项或阻塞：缺失项或原因、所需信息，随即结束。

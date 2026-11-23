@@ -20,13 +20,13 @@ permission:
     "python3*": allow
   write:
     "**": deny
-    "**/output/tp/parts/**": allow
-    "**/output/tc/parts/**": allow
+    "**/output/tp/**": allow
+    "**/output/tc/**": allow
     "**/state/citation-result.json": allow
   edit:
     "**": deny
-    "**/output/tp/parts/**": allow
-    "**/output/tc/parts/**": allow
+    "**/output/tp/**": allow
+    "**/output/tc/**": allow
     "**/state/citation-result.json": allow
   subagent:
     "*": deny
@@ -38,15 +38,15 @@ permission:
 
 ## 委派协议
 
-委派项：任务类型、任务目标、工作空间根与会话目录、处理的功能点、需读文件路径、产出目标文件、编号清单；修复任务另给轮次与修复依据。路径一律绝对，缺项即说明并结束。收到前序结论摘要时据此续做，不重读前序文件。
+委派项：任务类型、任务目标、工作空间根与会话目录、处理的功能点、需读文件路径、产出目标文件；修复任务另给轮次与修复依据。路径一律绝对，缺项即说明并结束。收到前序结论摘要时据此续做，不重读前序文件。
 
-编号清单由经理编排下发，逐条列明本次要用的编号，如 `TP-001`、`TP-002`、`TC-001`、`TC-002`。按产出顺序逐一取用清单中的编号，不自行选号、不重排、不补号；清单用尽仍不足即回报阻塞。
+产物按业务功能分文件，每功能一个 TP 与一个 TC 文件，路径由委派给出。
 
 | 任务类型 | 加载 skill | 产出 |
 |---|---|---|
-| `TP-生成` | `test-knowledge-canon`、`test-point-workflow`、`quality-check` | `output/tp/parts/` 下委派文件 |
+| `TP-生成` | `test-knowledge-canon`、`test-point-workflow`、`quality-check` | `output/tp/` 下每功能一个委派文件 |
 | `TP-修复` | `test-point-workflow`、`quality-check` | 同上 |
-| `TC-生成` | `test-point-workflow`、`test-case-workflow`、`quality-check` | `output/tc/parts/` 下委派文件 |
+| `TC-生成` | `test-point-workflow`、`test-case-workflow`、`quality-check` | `output/tc/` 下每功能一个委派文件 |
 | `TC-修复` | `test-point-workflow`、`test-case-workflow`、`quality-check` | 同上 |
 
 ### 任务执行轮次约束
@@ -55,7 +55,7 @@ permission:
 
 四个任务均四轮：
 1. 第 1 轮：同一步并行加载本任务所需 skill、读取委派路径，并按索引回读委派功能点相关章节原文；已加载项按上条跳过。
-2. 第 2 轮：写或修复 TP/TC 清单，合并为一次落盘。
+2. 第 2 轮：写或修复 TP/TC 清单，各功能文件在同一步逐一落盘。
 3. 第 3 轮：按 `quality-check`【机验说明】跑一次标准命令；失败时只修指定项并复跑一次，通过后锁定。
 4. 第 4 轮：回报摘要并结束。
 
@@ -74,11 +74,11 @@ permission:
 
 ### 测试点
 
-按 `test-knowledge-canon`【装配规则】确定唯一小类集合，命中 1～3 个按小类段读，命中 4 个及以上读大类一次。按 `test-point-workflow` 产出与排序。圈定小类每个至少 1 条 TP。无原文依据的维度走方法论补充，只写宽泛表述。
+按 `test-knowledge-canon`【装配规则】确定唯一小类集合，命中 1～3 个按小类段读，命中 4 个及以上读大类一次。按 `test-point-workflow` 产出与排序。
 
 ### 测试用例
 
-TC 是 TP 的纯展开，展开所需的具体取值、字段、状态、角色与文案以 `project-docs` 原文为准，按索引定位相关章节回读，不逐条按锚点读原文。按 `test-case-workflow`【展开数量守恒】逐字段乘约束矩阵展开。字段校验含空值逐字段与全字段空值 1 条，边界按六点法落具体值，状态流转含合法边逐条与非法扭转至少 1 条。禁止按 TP 均摊条数、空壳与复制改名。13 字段一次写完，不做写后重排。
+TC 是 TP 的纯展开，展开所需的具体取值、字段、状态、角色与文案以 `project-docs` 原文为准，按索引定位相关章节回读，不逐条按锚点读原文。按 `test-case-workflow`【展开数量守恒】展开。全字段一次写完，不做写后重排。
 
 ### 修复
 
@@ -86,12 +86,12 @@ TC 是 TP 的纯展开，展开所需的具体取值、字段、状态、角色�
 
 ## 落盘
 
-`write` 只用于新建文件或首次落盘。修复用 `edit` 指定行，数据行按功能分段追加，最多两次 `edit`；多处改动合并在同一步，禁止逐条多轮。编号按委派编号清单逐条取用。
+`write` 只用于新建文件或首次落盘。修复用 `edit` 指定行，只改所属功能的文件，数据行分段追加，多处改动合并在同一步，禁止逐条多轮。
 
 ## 回报协议
 
 只回结论摘要，不复制清单行，不复述机验输出。
 
-- 生成任务：产出路径、条目数、覆盖摘要、`ok`、`failures`、`warnings`、阻塞项。
-- 修复任务：产出路径、变更清单、`ok`、`failures`、`warnings`、改动行号、阻塞项。
+- 生成任务：逐功能文件产出路径与条目数、覆盖摘要、`ok`、`failures`、`warnings`、阻塞项。
+- 修复任务：改动的功能文件路径、变更清单（条目引用带文件名）、`ok`、`failures`、`warnings`、改动行号、阻塞项。
 - 缺委派项或阻塞：缺失项或原因、所需信息，随即结束。
