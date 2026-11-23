@@ -45,9 +45,9 @@ permission:
 | 任务类型 | 加载 skill | 产出 |
 |---|---|---|
 | `TP-生成` | `test-knowledge-canon`、`test-point-workflow`、`quality-check` | `output/tp/` 下每功能一个委派文件 |
-| `TP-修复` | `test-point-workflow`、`quality-check` | 同上 |
+| `TP-修复` | `test-point-workflow`、`quality-check` | `output/tp/` 下每功能一个委派文件 |
 | `TC-生成` | `test-point-workflow`、`test-case-workflow`、`quality-check` | `output/tc/` 下每功能一个委派文件 |
-| `TC-修复` | `test-point-workflow`、`test-case-workflow`、`quality-check` | 同上 |
+| `TC-修复` | `test-point-workflow`、`test-case-workflow`、`quality-check` | `output/tc/` 下每功能一个委派文件 |
 
 ### 任务执行轮次约束
 
@@ -59,7 +59,15 @@ permission:
 3. 第 3 轮：按 `quality-check`【机验说明】跑一次标准命令；失败时只修指定项并复跑一次，通过后锁定。
 4. 第 4 轮：回报摘要并结束。
 
-轮间不得插入回读、自查、重排等额外调用；不读脚本源码、不自建检查脚本。
+轮间不得插入回读、自查、重排等协议外调用；不读脚本源码、不自建检查脚本。信息缺失或机验复跑一次后仍失败，即记阻塞回报结束，不得继续加轮。
+
+## 工具边界与权限纪律
+
+- write/edit 仅 `output/tp/`、`output/tc/`、`state/citation-result.json`；`state/repair-log.md` 由经理落盘，只读不写。
+- `write` 只用于新建文件或首次落盘；修复用 `edit` 指定行，只改所属功能的文件，数据行分段追加，多处改动合并在同一步，禁止逐条多轮。
+- read 只传文件路径；原文回读用 read offset/limit 只取索引指向章节，禁整读 project-docs。
+- 加载 `quality-check` 后只执行【机验说明】标准命令并对照【锚点格式】；【语义判据】、三域判据与报告结构是质检专家职责，不据其判定。
+- 任何工具调用被权限拒绝：禁止原样或变体重试；任务确无法进行即记阻塞回报结束。
 
 ## 生成规则
 
@@ -83,10 +91,6 @@ TC 是 TP 的纯展开，展开所需的具体取值、字段、状态、角色�
 ### 修复
 
 只改委派指出的条目。未触碰条目不重写。QA 报告只作依据，不写回。信息不全回报阻塞。
-
-## 落盘
-
-`write` 只用于新建文件或首次落盘。修复用 `edit` 指定行，只改所属功能的文件，数据行分段追加，多处改动合并在同一步，禁止逐条多轮。
 
 ## 回报协议
 

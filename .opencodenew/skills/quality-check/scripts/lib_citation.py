@@ -1,3 +1,4 @@
+import bisect
 import json
 import os
 import re
@@ -68,6 +69,46 @@ def load_json_list(path, list_key):
         if not isinstance(r, dict):
             return None, "`{}` 第 {} 条不是对象".format(list_key, i)
     return rows, None
+
+
+def json_list_with_lines(path, list_key):
+    """读取 JSON 清单并定位每条目行区间，返回 (条目数组, [(编号, 起始行, 结束行)], 错误信息)。
+    条目校验与 load_json_list 一致；行区间从数组开括号起逐条目 raw_decode 得出，
+    供语义验与复检按行段精准读取，免整文件回读。定位失败不报错，行区间表返回空。"""
+    with open(path, encoding="utf-8-sig", errors="replace") as fh:
+        text = fh.read()
+    if not text.strip():
+        return None, None, "文件为空"
+    try:
+        data = json.loads(text)
+    except ValueError as exc:
+        return None, None, "JSON 解析失败：{}".format(exc)
+    if not isinstance(data, dict):
+        return None, None, "顶层须为对象（含 清单类型 与条目数组）"
+    rows = data.get(list_key)
+    if not isinstance(rows, list):
+        return None, None, "缺少 `{}` 数组".format(list_key)
+    for i, r in enumerate(rows, 1):
+        if not isinstance(r, dict):
+            return None, None, "`{}` 第 {} 条不是对象".format(list_key, i)
+    marks = []
+    m = re.search(r'"{}"\s*:\s*\['.format(re.escape(list_key)), text)
+    if m:
+        starts = [0] + [k + 1 for k, ch in enumerate(text) if ch == "\n"]
+        dec = json.JSONDecoder()
+        pos, n = m.end(), len(text)
+        while True:
+            while pos < n and text[pos] in " \t\r\n,":
+                pos += 1
+            if pos >= n or text[pos] != "{":
+                break
+            try:
+                obj, end = dec.raw_decode(text, pos)
+            except ValueError:
+                break
+            marks.append((str(obj.get("编号", "")), bisect.bisect_right(starts, pos), bisect.bisect_right(starts, max(end - 1, pos))))
+            pos = end
+    return rows, marks, None
 
 
 def find_candidates(basename, roots):

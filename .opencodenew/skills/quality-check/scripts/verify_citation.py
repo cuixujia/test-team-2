@@ -15,7 +15,8 @@
   --out    结果 JSON 落盘路径；省略则只打印到 stdout
 
 退出码：0 无失败 / 1 有失败 / 2 用法或致命错误。
-输出字段：ok、summary、failures、warnings。
+输出字段：ok、summary、failures、warnings、entry_lines（功能文件→编号→起始-结束行区间，
+供语义验与复检按行段精准读取，免整文件回读）。
 """
 import argparse
 import json
@@ -31,7 +32,8 @@ from lib_citation import (
     as_list,
     broken_table_rows,
     check_anchor,
-    load_json_list,
+    json_list_with_lines,
+    norm,
     parse_md_tables,
     table_fragment_count,
     table_with_columns,
@@ -106,17 +108,25 @@ def load_rows(path, required, kind):
 
 
 def load_json_rows(path, required, kind, list_key):
-    """读取 JSON 清单（TP/TC 产物），结构非法即致命错误；条目缺字段由后续逐字段检查兜底。"""
+    """读取 JSON 清单（TP/TC 产物），结构非法即致命错误；条目缺字段由后续逐字段检查兜底。
+    返回 (条目数组, 行区间表[(编号, 起, 止)])。"""
     if not path:
         return None, []
     if not os.path.isfile(path):
         fatal(["{} 文件不存在：{}".format(kind, path)])
-    rows, err = load_json_list(path, list_key)
+    rows, marks, err = json_list_with_lines(path, list_key)
     if err:
         fatal(["{} {}：{}".format(kind, err, path)])
     if rows and not all(col in rows[0] for col in required):
         fatal(["{} 条目缺少必需字段，需要：{}".format(kind, "、".join(required))])
-    return rows, []
+    return rows, marks or []
+
+
+def dup_field(value):
+    """重复检测键值归一：列表按序拼接，字符串折叠空白。"""
+    if isinstance(value, list):
+        return norm("|".join(str(v) for v in value))
+    return norm(value)
 
 
 def fatal(messages):
@@ -195,6 +205,7 @@ def main():
     # 功能标识 → {TP 编号: 条目信息}；编号按功能文件独立，跨文件重复合法
     tp_index = {}
     covered = set()  # 已有直属用例的 (功能标识, TP 编号)
+    entry_lines = {}  # 功能文件名 → {编号: "起-止"}，供语义验与复检按行段读取
 
     if args.index:
         idx_anchors = load_index_anchors(args.index)
@@ -221,9 +232,9 @@ def main():
         for path in args.tp:
             tag = file_tag(path)
             fname = os.path.basename(path)
-            tp_rows, w = load_json_rows(path, TP_REQUIRED, "TP清单", TP_LIST_KEY)
-            warnings.extend(w)
+            tp_rows, marks = load_json_rows(path, TP_REQUIRED, "TP清单", TP_LIST_KEY)
             summary["tp_rows"] += len(tp_rows)
+            entry_lines[fname] = {tid: "{}-{}".format(s, e) for tid, s, e in marks if tid}
             idx = tp_index.setdefault(tag, {})
             seen = set()  # 编号唯一性按文件内判定，跨功能文件重复合法
             for r in tp_rows:
@@ -273,10 +284,11 @@ def main():
             tag = file_tag(path)
             fname = os.path.basename(path)
             idx = tp_index[tag]
-            tc_rows, w = load_json_rows(path, TC_REQUIRED, "TC清单", TC_LIST_KEY)
-            warnings.extend(w)
+            tc_rows, marks = load_json_rows(path, TC_REQUIRED, "TC清单", TC_LIST_KEY)
             summary["tc_rows"] += len(tc_rows)
+            entry_lines[fname] = {tid: "{}-{}".format(s, e) for tid, s, e in marks if tid}
             seen = set()  # 编号唯一性按文件内判定
+            dup_map = {}  # (关联TP, 数据, 步骤, 预期) → [编号]，四要素全同即重复
             for r in tc_rows:
                 tcid = (r.get("编号") or "").strip()
                 record = "{} {}".format(fname, tcid) if tcid else "{} (空编号)".format(fname)
@@ -319,6 +331,17 @@ def main():
                         failures.append({"record": record, "field": "出处锚点", "anchor": a, "reason": reason})
                 check_basis_type(r, record, failures, summary, "tc_methodology")
                 check_clar_ref(r.get("澄清依据"), clar_set, record, failures, has_clar)
+                if re.fullmatch(r"TP-\d+", ref):
+                    dup_key = (ref, dup_field(r.get("测试数据")), dup_field(r.get("操作步骤")), dup_field(r.get("预期结果")))
+                    dup_map.setdefault(dup_key, []).append(tcid)
+            for _key, ids in sorted(dup_map.items()):
+                if len(ids) > 1:
+                    failures.append({
+                        "record": "{} {}".format(fname, "、".join(ids)),
+                        "field": "用例重复",
+                        "anchor": _key[0],
+                        "reason": "关联TP/测试数据/操作步骤/预期结果四要素全同——保留一条，其余改为该 TP 独立分支（同值改名、伪边界等硬凑仍属语义检）",
+                    })
 
     if args.tc:
         for tag in sorted(tp_index):
@@ -343,7 +366,7 @@ def main():
 
     summary["failures"] = len(failures)
     summary["warnings"] = len(warnings)
-    payload = {"ok": not failures, "summary": summary, "failures": failures, "warnings": warnings}
+    payload = {"ok": not failures, "summary": summary, "failures": failures, "warnings": warnings, "entry_lines": entry_lines}
 
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     # --out 仅兼容既有命令；结果只打印，不落盘
