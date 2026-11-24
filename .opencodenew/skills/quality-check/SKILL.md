@@ -92,12 +92,12 @@ TP 与 TC 语义检视共用。
 
 | 场景 | 命令 |
 | --- | --- |
-| 索引生成 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --index <会话>/scope/resources-index.md --out <会话>/state/citation-result.json` |
-| 索引质检 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --index <会话>/scope/resources-index.md` |
-| TP 生成（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/tp-{功能号1}.json --tp <会话>/output/tp/tp-{功能号2}.json --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
-| TP 质检（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/tp-{功能号1}.json --tp <会话>/output/tp/tp-{功能号2}.json --clar <会话>/state/clarifications.md` |
-| TC 生成与修复（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/tp-{功能号1}.json --tc <会话>/output/tc/tc-{功能号1}.json --tp <会话>/output/tp/tp-{功能号2}.json --tc <会话>/output/tc/tc-{功能号2}.json --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
-| TC 质检（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --docs <会话>/user-input --tp <会话>/output/tp/tp-{功能号1}.json --tc <会话>/output/tc/tc-{功能号1}.json --tp <会话>/output/tp/tp-{功能号2}.json --tc <会话>/output/tc/tc-{功能号2}.json --clar <会话>/state/clarifications.md` |
+| 索引生成 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --index <会话>/scope/resources-index.md --out <会话>/state/citation-result.json` |
+| 索引质检 | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --index <会话>/scope/resources-index.md` |
+| TP 生成（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --tp <会话>/output/tp/tp-{功能号1}.json --tp <会话>/output/tp/tp-{功能号2}.json --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
+| TP 质检（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --tp <会话>/output/tp/tp-{功能号1}.json --tp <会话>/output/tp/tp-{功能号2}.json --clar <会话>/state/clarifications.md` |
+| TC 生成与修复（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --tp <会话>/output/tp/tp-{功能号1}.json --tc <会话>/output/tc/tc-{功能号1}.json --tp <会话>/output/tp/tp-{功能号2}.json --tc <会话>/output/tc/tc-{功能号2}.json --clar <会话>/state/clarifications.md --out <会话>/state/citation-result.json` |
+| TC 质检（单批） | `python3 SKILLS_ROOT/quality-check/scripts/verify_citation.py --docs <根>/project-docs --tp <会话>/output/tp/tp-{功能号1}.json --tc <会话>/output/tc/tc-{功能号1}.json --tp <会话>/output/tp/tp-{功能号2}.json --tc <会话>/output/tc/tc-{功能号2}.json --clar <会话>/state/clarifications.md` |
 
 ## 资料域
 
