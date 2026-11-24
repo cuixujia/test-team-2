@@ -15,8 +15,8 @@
   --out    结果 JSON 落盘路径；省略则只打印到 stdout
 
 退出码：0 无失败 / 1 有失败 / 2 用法或致命错误。
-输出字段：ok、summary、failures、warnings、entry_lines（功能文件→编号→起始-结束行区间，
-供语义验与复检按行段精准读取，免整文件回读）。
+输出字段：ok、summary、failures、warnings、entry_lines（功能文件→编号→条目行号，
+新格式一条数据占一个物理行，供语义验与复检按行精准读取单条）。
 """
 import argparse
 import json
@@ -32,7 +32,7 @@ from lib_citation import (
     as_list,
     broken_table_rows,
     check_anchor,
-    json_list_with_lines,
+    json_table_with_lines,
     norm,
     parse_md_tables,
     table_fragment_count,
@@ -41,9 +41,9 @@ from lib_citation import (
 
 TP_REQUIRED = ["编号", "关联业务功能", "测试点名称", "类型", "测试维度", "所属小类", "用例展开重点", "依据类型", "澄清依据", "出处锚点"]
 TC_REQUIRED = ["编号", "关联业务功能", "关联TP", "用例名称", "用例类型", "测试方法", "前置条件", "测试数据", "操作步骤", "预期结果", "依据类型", "澄清依据", "出处锚点"]
-# JSON 清单顶层条目数组的键名（与 test-point-workflow / test-case-workflow【清单结构】一致）
-TP_LIST_KEY = "测试点"
-TC_LIST_KEY = "测试用例"
+# name 字段命名规则：tp 文件为 功能号-TP，tc 文件为 功能号-TC（与 workflow【清单结构】一致）
+TP_NAME = re.compile(r"^[^-]+-TP$")
+TC_NAME = re.compile(r"^[^-]+-TC$")
 CLAR_REQUIRED = ["编号", "来源", "问题", "影响面", "默认建议", "答复", "状态"]
 OUT_NAME = re.compile(r"^citation-result.*\.json$")
 INDEX_ANCHOR_LINE = re.compile(r'^\s*[-*]\s*锚点\s*[:：]\s*(.+)$')
@@ -107,19 +107,23 @@ def load_rows(path, required, kind):
     return rows, warns
 
 
-def load_json_rows(path, required, kind, list_key):
-    """读取 JSON 清单（TP/TC 产物），结构非法即致命错误；条目缺字段由后续逐字段检查兜底。
-    返回 (条目数组, 行区间表[(编号, 起, 止)])。"""
+def load_json_rows(path, required, name_pat, kind, suffix):
+    """读取表格化 JSON 清单（TP/TC 产物），结构非法即致命错误；单元格值按 headers 还原为字典。
+    返回 (条目字典数组, 条目行号列表)。"""
     if not path:
         return None, []
     if not os.path.isfile(path):
         fatal(["{} 文件不存在：{}".format(kind, path)])
-    rows, marks, err = json_list_with_lines(path, list_key)
+    name, headers, rows, marks, err = json_table_with_lines(path)
     if err:
         fatal(["{} {}：{}".format(kind, err, path)])
-    if rows and not all(col in rows[0] for col in required):
-        fatal(["{} 条目缺少必需字段，需要：{}".format(kind, "、".join(required))])
-    return rows, marks or []
+    if not name_pat.match(name):
+        fatal(["{} name 命名非法：{}（应为 功能号-{}）".format(kind, name, suffix)])
+    missing = [c for c in required if c not in headers]
+    if missing:
+        fatal(["{} headers 缺少必需字段：{}".format(kind, "、".join(missing))])
+    dict_rows = [dict(zip(headers, r)) for r in rows]
+    return dict_rows, marks or []
 
 
 def dup_field(value):
@@ -232,9 +236,12 @@ def main():
         for path in args.tp:
             tag = file_tag(path)
             fname = os.path.basename(path)
-            tp_rows, marks = load_json_rows(path, TP_REQUIRED, "TP清单", TP_LIST_KEY)
+            tp_rows, marks = load_json_rows(path, TP_REQUIRED, TP_NAME, "TP清单", "TP")
             summary["tp_rows"] += len(tp_rows)
-            entry_lines[fname] = {tid: "{}-{}".format(s, e) for tid, s, e in marks if tid}
+            entry_lines[fname] = {
+                str(r.get("编号", "")).strip(): ln
+                for r, ln in zip(tp_rows, marks) if str(r.get("编号", "")).strip()
+            }
             idx = tp_index.setdefault(tag, {})
             seen = set()  # 编号唯一性按文件内判定，跨功能文件重复合法
             for r in tp_rows:
@@ -284,9 +291,12 @@ def main():
             tag = file_tag(path)
             fname = os.path.basename(path)
             idx = tp_index[tag]
-            tc_rows, marks = load_json_rows(path, TC_REQUIRED, "TC清单", TC_LIST_KEY)
+            tc_rows, marks = load_json_rows(path, TC_REQUIRED, TC_NAME, "TC清单", "TC")
             summary["tc_rows"] += len(tc_rows)
-            entry_lines[fname] = {tid: "{}-{}".format(s, e) for tid, s, e in marks if tid}
+            entry_lines[fname] = {
+                str(r.get("编号", "")).strip(): ln
+                for r, ln in zip(tc_rows, marks) if str(r.get("编号", "")).strip()
+            }
             seen = set()  # 编号唯一性按文件内判定
             dup_map = {}  # (关联TP, 数据, 步骤, 预期) → [编号]，四要素全同即重复
             for r in tc_rows:

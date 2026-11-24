@@ -1,4 +1,3 @@
-import bisect
 import json
 import os
 import re
@@ -50,65 +49,48 @@ def anchors_of(cell):
     return as_list(cell)
 
 
-def load_json_list(path, list_key):
-    """读取 JSON 清单文件（顶层对象含 list_key 数组），返回 (条目数组, 错误信息)。"""
+def json_table_with_lines(path):
+    """读取表格化 JSON 清单（顶层对象含 name、headers、rows），返回 (name, headers, rows, 条目行号列表, 错误信息)。
+    rows 每条一行数组，单元格为字符串或字符串数组；一条数据占一个物理行，
+    条目行号即该行行号，供语义验与复检按行精准读取单条。结构非法返回错误。"""
     with open(path, encoding="utf-8-sig", errors="replace") as fh:
         text = fh.read()
     if not text.strip():
-        return None, "文件为空"
+        return None, None, None, None, "文件为空"
     try:
         data = json.loads(text)
     except ValueError as exc:
-        return None, "JSON 解析失败：{}".format(exc)
+        return None, None, None, None, "JSON 解析失败：{}".format(exc)
     if not isinstance(data, dict):
-        return None, "顶层须为对象（含 清单类型 与条目数组）"
-    rows = data.get(list_key)
+        return None, None, None, None, "顶层须为对象（含 name、headers、rows）"
+    name = data.get("name")
+    headers = data.get("headers")
+    rows = data.get("rows")
+    if not isinstance(name, str) or not name.strip():
+        return None, None, None, None, "缺少字符串字段 `name`"
+    if not isinstance(headers, list) or not all(isinstance(h, str) and h.strip() for h in headers):
+        return None, None, None, None, "`headers` 须为非空字符串数组"
     if not isinstance(rows, list):
-        return None, "缺少 `{}` 数组".format(list_key)
+        return None, None, None, None, "缺少 `rows` 数组"
     for i, r in enumerate(rows, 1):
-        if not isinstance(r, dict):
-            return None, "`{}` 第 {} 条不是对象".format(list_key, i)
-    return rows, None
-
-
-def json_list_with_lines(path, list_key):
-    """读取 JSON 清单并定位每条目行区间，返回 (条目数组, [(编号, 起始行, 结束行)], 错误信息)。
-    条目校验与 load_json_list 一致；行区间从数组开括号起逐条目 raw_decode 得出，
-    供语义验与复检按行段精准读取，免整文件回读。定位失败不报错，行区间表返回空。"""
-    with open(path, encoding="utf-8-sig", errors="replace") as fh:
-        text = fh.read()
-    if not text.strip():
-        return None, None, "文件为空"
-    try:
-        data = json.loads(text)
-    except ValueError as exc:
-        return None, None, "JSON 解析失败：{}".format(exc)
-    if not isinstance(data, dict):
-        return None, None, "顶层须为对象（含 清单类型 与条目数组）"
-    rows = data.get(list_key)
-    if not isinstance(rows, list):
-        return None, None, "缺少 `{}` 数组".format(list_key)
-    for i, r in enumerate(rows, 1):
-        if not isinstance(r, dict):
-            return None, None, "`{}` 第 {} 条不是对象".format(list_key, i)
+        if not isinstance(r, list):
+            return None, None, None, None, "`rows` 第 {} 条不是数组".format(i)
+        if len(r) != len(headers):
+            return None, None, None, None, "`rows` 第 {} 条长度 {} 与 headers 长度 {} 不一致".format(i, len(r), len(headers))
+    # 定位 rows 开括号行：其后每个数据行即一条条目；空行跳过，遇闭合括号停止，避免行号错位
     marks = []
-    m = re.search(r'"{}"\s*:\s*\['.format(re.escape(list_key)), text)
-    if m:
-        starts = [0] + [k + 1 for k, ch in enumerate(text) if ch == "\n"]
-        dec = json.JSONDecoder()
-        pos, n = m.end(), len(text)
-        while True:
-            while pos < n and text[pos] in " \t\r\n,":
-                pos += 1
-            if pos >= n or text[pos] != "{":
-                break
-            try:
-                obj, end = dec.raw_decode(text, pos)
-            except ValueError:
-                break
-            marks.append((str(obj.get("编号", "")), bisect.bisect_right(starts, pos), bisect.bisect_right(starts, max(end - 1, pos))))
-            pos = end
-    return rows, marks, None
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        if re.search(r'"rows"\s*:\s*\[', line):
+            for j in range(i + 1, len(lines)):
+                s = lines[j].strip()
+                if not s:
+                    continue
+                if s.startswith("]"):
+                    break
+                marks.append(j + 1)
+            break
+    return name, headers, rows, marks, None
 
 
 def find_candidates(basename, roots):

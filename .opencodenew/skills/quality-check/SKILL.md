@@ -82,7 +82,7 @@ TP 与 TC 语义检视共用。
 
 ## 机验说明
 
-`verify_citation.py` 检查锚点、JSON 清单结构、值域、关联、澄清编号、数量守恒与用例重复。退出码 0 无失败，1 有失败，2 用法或致命错误。payload 含 `ok`、`summary`、`failures`、`warnings`、`entry_lines`、`fatal_messages`；`entry_lines` 为功能文件→编号→起始-结束行区间映射，语义验与复检据此按行段读取条目。
+`verify_citation.py` 检查锚点、JSON 清单结构、值域、关联、澄清编号、数量守恒与用例重复。退出码 0 无失败，1 有失败，2 用法或致命错误。payload 含 `ok`、`summary`、`failures`、`warnings`、`entry_lines`、`fatal_messages`；`entry_lines` 为功能文件→编号→条目行号映射，语义验与复检据此按行读取条目。
 
 执行次数：每轮每产物只跑一次。命令按下方表格原样执行，脚本用绝对路径，路径不加引号，不设 shell 变量，不加 `; echo` 等拼接；不读脚本源码，不自建检查脚本。生成或修复任务带 `--out`，质检任务不带；`--out` 仅作命令标识，结果由脚本打印到 stdout，不落盘。通过后即锁定，禁止再次执行；R2 及以后复检不跑机验，只按 `repair-log.md` 核对改动行段。产物被修改时由修改方重跑一次，其他角色不得复跑。
 
