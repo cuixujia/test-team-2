@@ -55,7 +55,7 @@ permission:
 
 ## 工具边界与权限纪律
 
-- 可用工具与权限：skill、read、glob、grep 不受限；bash 仅 `python3` 跑机验、`ls`、`wc`，文本检索一律用 grep 工具；产物目录由 write 自动创建，禁止 mkdir；write/edit 仅 `output/tp/`、`output/tc/`、`state/citation-result.json`，`state/repair-log.md` 由经理落盘，只读不写。
+- 可用工具与权限：skill、read、glob、grep 不受限；bash 仅 `python3` 跑机验、`ls`、`wc`，禁止在 bash 中跑 grep 等检索命令，文本检索一律用 grep 工具；产物目录由 write 自动创建，禁止 mkdir；write/edit 仅 `output/tp/`、`output/tc/`、`state/citation-result.json`，`state/repair-log.md` 由经理落盘，只读不写。
 - `write` 只用于新建文件或首次落盘；修复用 `edit` 指定行，只改所属功能的文件，同一文件的全部改动合并在该文件的回合，禁止逐条多回合。
 - read 只传文件路径；原文回读用 read offset/limit 只取索引指向章节，禁整读 project-docs。
 - 加载 `quality-check` 后只执行【机验说明】标准命令并对照【锚点格式】；三域判据与报告结构是质检专家职责，不据其判定。
