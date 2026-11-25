@@ -1,0 +1,26 @@
+{
+  "name": "mcp-demo-server",
+  "version": "0.1.0",
+  "description": "最小 MCP server 脚手架(TypeScript + 官方 SDK,stdio 传输)",
+  "type": "module",
+  "bin": {
+    "mcp-demo-server": "./dist/index.js"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "test:client": "node test/client.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "express": "^5.3.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}

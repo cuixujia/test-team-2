@@ -1,3 +1,5 @@
 file/session-*
 参考资料/
 .idea/
+node_modules/
+dist/
