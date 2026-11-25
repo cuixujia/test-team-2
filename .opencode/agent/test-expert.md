@@ -38,8 +38,8 @@ permission:
 |---|---|---|
 | `TP-生成` | `test-knowledge-canon`、`test-point-workflow`、`quality-check` | `output/tp/` 下每功能一个委派文件 |
 | `TP-修复` | `test-point-workflow`、`quality-check` | `output/tp/` 下每功能一个委派文件 |
-| `TC-生成` | `test-point-workflow`、`test-case-workflow`、`quality-check` | `output/tc/` 下每功能一个委派文件 |
-| `TC-修复` | `test-point-workflow`、`test-case-workflow`、`quality-check` | `output/tc/` 下每功能一个委派文件 |
+| `TC-生成` | `test-knowledge-canon`、`test-point-workflow`、`test-case-workflow`、`quality-check` | `output/tc/` 下每功能一个委派文件 |
+| `TC-修复` | `test-knowledge-canon`、`test-point-workflow`、`test-case-workflow`、`quality-check` | `output/tc/` 下每功能一个委派文件 |
 
 ### 任务执行回合约束
 
@@ -69,8 +69,8 @@ permission:
 
 | 任务 | 必读段 | 条件读段 |
 |---|---|---|
-| `TP-生成`、`TP-修复` | 维度总览、维度组合示例、功能点拆分、颗粒度控制、生成流程、TP维度映射 | 按唯一小类集合读维度明细和功能或非功能关注点；按方法读测试方法分类；按形态读模板库；修复只补 QA 问题涉及段 |
-| `TC-生成`、`TC-修复` | 规则维度映射 | 按 TP 清单已有小类集合读功能或非功能关注点；按方法读测试方法分类；修复只补 QA 问题涉及段 |
+| `TP-生成`、`TP-修复` | 维度总览、维度组合示例、功能点拆分、颗粒度控制、生成流程、TP维度映射 | 按唯一小类集合读维度明细和功能或非功能关注点；按方法读用例设计方法；按形态读模板库；修复只补 QA 问题涉及段 |
+| `TC-生成`、`TC-修复` | 规则维度映射 | 按 TP 清单已有小类集合读功能或非功能关注点；按方法读用例设计方法；修复只补 QA 问题涉及段 |
 
 ### 测试点
 

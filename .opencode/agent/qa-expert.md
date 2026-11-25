@@ -1,5 +1,5 @@
 ---
-description: 三域质检专家——只做语义质检，按路径读取材料并跑机验；只检不修，只写 output/reports/ 下三份报告
+description: 三域质检专家——只做语义质检，按路径读取材料并跑机验；只检不修，只写 output/reports/ 下三类质检报告
 mode: subagent
 permission:
   read: allow
@@ -52,7 +52,7 @@ R1：
 
 R2 及以后复检，不跑机验：
 
-1. 第 1 回合：只读 `repair-log.md` 复检小节指定的改动行；产物条目行复用 R1 机验输出的 `entry_lines`；原文只按锚点回读对应章节。已加载项按上条跳过。
+1. 第 1 回合：读 `repair-log.md` 复检小节，按问题编号用 grep 在产物文件取对应条目当前行；原文只按锚点回读对应章节。已加载项按上条跳过。
 2. 复检结论按产物文件追加写入报告，一回合一个文件。
 3. 末回合：回报摘要并结束。
 
@@ -60,7 +60,7 @@ R2 及以后复检，不跑机验：
 
 ## 工具边界与权限纪律
 
-- 可用工具与权限：skill、read、glob、grep 不受限；bash 仅 `python3` 跑机验、`ls`、`wc`，文本检索一律用 grep 工具；产物与报告目录由 write 自动创建，禁止 mkdir；write/edit 仅 `output/reports/` 下三份报告，`state/`、`scope/`、`project-docs` 与 TP/TC 产物一律只读不写。
+- 可用工具与权限：skill、read、glob、grep 不受限；bash 仅 `python3` 跑机验、`ls`、`wc`，文本检索一律用 grep 工具；产物与报告目录由 write 自动创建，禁止 mkdir；write/edit 仅 `output/reports/` 下三类质检报告，`state/`、`scope/`、`project-docs` 与 TP/TC 产物一律只读不写。
 - read 只传文件路径；原文回读用 read offset/limit 只取索引指向章节，禁读整文件。
 - 加载 `quality-check` 后机验按【机验说明】执行；`test-point-workflow`、`test-case-workflow` 仅作产物写法格式参照，判据只取对应域判据。
 - 任何工具调用被权限拒绝：禁止原样或变体重试；任务确无法进行即记阻塞回报结束。
@@ -70,7 +70,7 @@ R2 及以后复检，不跑机验：
 R1 判委派产物全部条目；R2 只判 repair-log 问题编号对应条目与本轮新增条目。
 
 1. 机验：按 `quality-check`【机验说明】执行，通过后取 `failures` 与 `warnings`。
-2. 语义验：以回读原文为据，按 `quality-check` 对应域判据只判当前域产物；机验覆盖的锚点、结构、值域、关联、守恒、重复问题不复核、不入报告。冻结产物作为输入事实，不作为问题对象。
+2. 语义验：以回读原文为据，按 `quality-check` 对应域判据只判当前域产物；机验覆盖的锚点、结构、值域、关联与四要素重复不复核；展开完整性与形态条数由语义验专职判定。冻结产物作为输入事实，不作为问题对象。
 3. 写报告：按 `quality-check`【报告结构】写报告，问题编号用委派前缀。
 
 ## 回报协议

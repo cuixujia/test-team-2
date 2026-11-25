@@ -12,11 +12,11 @@ permission:
     "python3*": allow
   write:
     "**": deny
-    "**/scope/**": allow
+    "**/scope/resources-index.md": allow
     "**/state/citation-result.json": allow
   edit:
     "**": deny
-    "**/scope/**": allow
+    "**/scope/resources-index.md": allow
     "**/state/citation-result.json": allow
   subagent:
     "*": deny
