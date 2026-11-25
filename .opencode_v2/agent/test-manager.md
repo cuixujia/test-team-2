@@ -100,8 +100,8 @@ prompt 必写：任务类型、任务目标、最少需读取路径、产出目�
 | material-expert | `索引构建`、`索引修复` | 选中功能、`briefing.md`；修复另给 QA 问题编号与报告 | `scope/resources-index.md` | 索引构建与修复 |
 | test-expert | `TP-生成` | 批号、本批功能文件清单、`scope.md`、`resources-index.md`、`clarifications.md`、`project-docs` 原文（按索引定位本批功能点章节），不读 `briefing.md` | 本批 TP 功能文件 | 本批 TP 生成与修复 |
 | test-expert | `TP-修复` | 批号、本批 TP 功能文件、QA 报告、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位本批章节） | 本批 TP 功能文件 | 本批 TP 生成与修复 |
-| test-expert | `TC-生成` | 批号、本批功能文件清单、本批 TP 功能文件、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位本批章节），不读 `briefing.md` | 本批 TC 功能文件 | 本批 TC 生成与修复 |
-| test-expert | `TC-修复` | 批号、本批 TC 与 TP 功能文件、QA 报告、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位本批章节） | 本批 TC 功能文件 | 本批 TC 生成与修复 |
+| test-expert | `TC-生成` | 批号、本批功能文件清单、本批 TP 功能文件、`clarifications.md`、`resources-index.md`、`state/briefing.md`、`project-docs` 原文（按索引定位本批章节） | 本批 TC 功能文件 | 本批 TC 生成与修复 |
+| test-expert | `TC-修复` | 批号、本批 TC 与 TP 功能文件、QA 报告、`clarifications.md`、`resources-index.md`、`state/briefing.md`、`project-docs` 原文（按索引定位本批章节） | 本批 TC 功能文件 | 本批 TC 生成与修复 |
 | qa-expert | 材料质检 | `resources-index.md`、选中功能原文 | `output/reports/qa-materials.md` | 材料质检 |
 | qa-expert | TP 质检 | 批号、本批 TP 功能文件、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位本批章节） | `output/reports/qa-tp-B{批号}.md` | 本批 TP 质检 |
 | qa-expert | TC 质检 | 批号、本批 TP 与 TC 功能文件、`clarifications.md`、`resources-index.md`、`project-docs` 原文（按索引定位本批章节） | `output/reports/qa-tc-B{批号}.md` | 本批 TC 质检 |
@@ -120,7 +120,7 @@ prompt 必写：任务类型、任务目标、最少需读取路径、产出目�
 1. 工作空间检查：glob path=工作空间根 pattern=`**/project-docs/**`，结果为空即停工呈用户，不得开工。
 2. 断线恢复优先：glob path=工作空间根 pattern=`**/state/**` 扫描 `session-*/state/state.md`；唯一一个未「完成」的会话 → 读 `state.md` 后续做，禁止重做已完成阶段；多个会话或意图存疑 → question 工具问一次「恢复最新 / 新建会话」。
 3. 新建会话时 `date +%Y%m%d-%H%M%S` 取时间戳，确定 `<根>/session-<时间戳>/` 路径；目录由 `write` 落盘时自动创建，禁止 mkdir；写入 `state.md`。
-4. `state/briefing.md` 已存在则沿用；否则按本文件【state/briefing.md】写入不变事实。
+4. `state/briefing.md` 已存在则沿用；否则按本文件【state/briefing.md】写入不变事实与需求信息：从用户输入提取需求 id 登记，未提供写 `未提供`、两名称值留空。
 
 ### 阶段 2 范围确认
 
@@ -144,9 +144,10 @@ prompt 必写：任务类型、任务目标、最少需读取路径、产出目�
 
 ### 阶段 4 测试点生成
 
-1. 按【批次规划与并发调度】逐批派发 `TP-生成`，每批带批号与本批功能文件清单，同时执行不超过 3 个任务。
-2. 逐批核对产出功能文件路径、逐文件条目数与机验结论，纳入本批台账。回报阻塞按【用户交互与异常处置】处理，不阻塞其他已派批次。
-3. 你不读 TP 功能文件全文，不自行改动 TP 条目；需改动一律续接本批 `TP-修复`。
+1. 需求详情获取：`state/briefing.md` 登记了需求 id 时，调用需求详情查询工具取需求分组名称与需求名称回写该小节，失败重试一次，仍失败两值留空并记 `state.md`；未登记则跳过。
+2. 按【批次规划与并发调度】逐批派发 `TP-生成`，每批带批号与本批功能文件清单，同时执行不超过 3 个任务。
+3. 逐批核对产出功能文件路径、逐文件条目数与机验结论，纳入本批台账。回报阻塞按【用户交互与异常处置】处理，不阻塞其他已派批次。
+4. 你不读 TP 功能文件全文，不自行改动 TP 条目；需改动一律续接本批 `TP-修复`。
 
 ### 阶段 5 测试点质检与验收
 
@@ -272,6 +273,11 @@ prompt 必写：任务类型、任务目标、最少需读取路径、产出目�
 - 会话目录：`/abs/workspace-root/session-<时间戳>`
 - SKILLS_ROOT：`/abs/skills`
 
+## 需求信息
+- 需求id：REQ-1234
+- 需求分组名称：协同平台
+- 需求名称：客户需求管理二期
+
 ## 不变事实
 
 ### 收敛判定语模板
@@ -287,9 +293,10 @@ prompt 必写：任务类型、任务目标、最少需读取路径、产出目�
 | 根路径 | 当前工作目录即工作空间的绝对路径 |
 | 会话目录 | 根路径 + `session-<时间戳>` 绝对路径 |
 | SKILLS_ROOT | 当前团队 skill 根目录的绝对路径，阶段 1 由经理写入 |
+| 需求信息 | 三行固定键 `需求id`、`需求分组名称`、`需求名称`；阶段 1 写 id，阶段 4 回写详情；未提供或查询失败时名称留空 |
 | 收敛判定语模板 | QA 收敛口径与机验收敛口径各一条 |
 | 资料文件 | 逐份编号，写相对路径与内容概要 |
-| 写入与维护 | 已存在则沿用、不重写；轮次动态不进 briefing，记 `state.md` |
+| 写入与维护 | 已存在则沿用、不重写，仅需求信息小节由阶段 4 回写详情；轮次动态不进 briefing，记 `state.md` |
 
 ### state/state.md
 
