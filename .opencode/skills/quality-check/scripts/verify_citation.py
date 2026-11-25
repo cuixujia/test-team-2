@@ -27,7 +27,6 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib_citation import (
-    CLAR_REF,
     anchors_of,
     as_list,
     broken_table_rows,
@@ -39,8 +38,8 @@ from lib_citation import (
     table_with_columns,
 )
 
-TP_REQUIRED = ["编号", "关联业务功能", "测试点名称", "类型", "测试维度", "所属小类", "用例展开重点", "依据类型", "澄清依据", "出处锚点"]
-TC_REQUIRED = ["编号", "关联业务功能", "关联TP", "用例名称", "用例类型", "测试方法", "前置条件", "测试数据", "操作步骤", "预期结果", "依据类型", "澄清依据", "出处锚点"]
+TP_REQUIRED = ["AI测试点编号", "系统功能", "测试点", "类型", "测试维度", "所属小类", "用例展开重点", "依据类型", "备注"]
+TC_REQUIRED = ["AI用例编号", "系统", "系统功能", "测试点", "用例名称", "优先级", "用例类型", "测试方法", "前置条件", "测试数据", "测试步骤", "预期结果", "依据类型", "备注"]
 # name 字段命名规则：tp 文件为 功能号-TP，tc 文件为 功能号-TC（与 workflow【清单结构】一致）
 TP_NAME = re.compile(r"^[^-]+-TP$")
 TC_NAME = re.compile(r"^[^-]+-TC$")
@@ -73,8 +72,12 @@ TP_DIMENSIONS = {
 TP_TYPES = {"功能级", "场景级"}
 # 测试方法六枚举（《通用测试方法论》「七、方法选型决策指南」，单值白名单）
 TC_METHODS = {"等价类+边界值", "决策表", "状态迁移", "场景法", "正交实验", "错误推测"}
-# 依据类型二分：原文依据=锚点/澄清直接支撑；方法论补充=按四份原文知识链该维度/小类/关注点发散补测试内容，对象仍须有原文锚点
-BASIS_TYPES = {"原文依据", "方法论补充"}
+# TC 优先级与用例类型枚举（test-case-workflow【字段要求】）
+TC_PRIORITIES = {"高", "中", "低"}
+TC_KINDS = {"流程用例", "功能用例"}
+# 依据类型三值（TP/TC 统一）：原文依据=锚点直接支撑；澄清依据(C-编号)=用户澄清过缺失维度；补充条目=按理解或测试知识补且未走资料缺口澄清，对象仍须有原文锚点
+BASIS_FIXED = {"原文依据", "补充条目"}
+BASIS_CLAR = re.compile(r"^澄清依据\((C-\d+)\)$")
 
 def load_rows(path, required, kind):
     if not path:
@@ -164,24 +167,19 @@ def load_index_anchors(path):
     return anchors
 
 
-def check_clar_ref(value, clar_set, record, failures, has_clar):
-    # 多值：JSON 清单为数组，每项一个编号；空数组即无澄清依据
-    for seg in as_list(value):
-        if not CLAR_REF.match(seg):
-            failures.append({"record": record, "field": "澄清依据", "anchor": seg, "reason": "澄清依据格式非法（数组每项应为 C-编号 或 C-编号(默认)）"})
-            continue
-        cid = CLAR_REF.match(seg).group(1)
-        if has_clar and cid not in clar_set:
-            failures.append({"record": record, "field": "澄清依据", "anchor": seg, "reason": "澄清编号 {} 在 clarifications.md 中不存在".format(cid)})
-
-
-def check_basis_type(row, record, failures, summary, counter_key):
+def check_basis_type(row, record, clar_set, has_clar, failures, summary, counter_key):
+    """依据类型三值校验（TP/TC 统一）：澄清引用形如 澄清依据(C-01)，括号内 C 编号须存在于澄清表。"""
     basis = (row.get("依据类型") or "").strip()
-    if basis not in BASIS_TYPES:
-        failures.append({"record": record, "field": "依据类型", "anchor": basis or "(空)", "reason": "依据类型非法（仅 原文依据/方法论补充；两类均须带证明对象存在的原文锚点）"})
+    m = BASIS_CLAR.match(basis)
+    if m:
+        if has_clar and m.group(1) not in clar_set:
+            failures.append({"record": record, "field": "依据类型", "anchor": basis, "reason": "澄清编号 {} 在 clarifications.md 中不存在".format(m.group(1))})
         return
-    if basis == "方法论补充":
-        summary[counter_key] += 1
+    if basis in BASIS_FIXED:
+        if basis == "补充条目":
+            summary[counter_key] += 1
+        return
+    failures.append({"record": record, "field": "依据类型", "anchor": basis or "(空)", "reason": "依据类型非法（仅 原文依据/澄清依据(C-编号)/补充条目，单值）"})
 
 
 def main():
@@ -209,7 +207,7 @@ def main():
     # 功能标识 → {TP 编号: 条目信息}；编号按功能文件独立，跨文件重复合法
     tp_index = {}
     covered = set()  # 已有直属用例的 (功能标识, TP 编号)
-    entry_lines = {}  # 功能文件名 → {编号: "起-止"}，供语义验与复检按行段读取
+    entry_lines = {}  # 功能文件名 → {编号: 条目行号}，供语义验与复检按行读取
 
     if args.index:
         idx_anchors = load_index_anchors(args.index)
@@ -239,32 +237,31 @@ def main():
             tp_rows, marks = load_json_rows(path, TP_REQUIRED, TP_NAME, "TP清单", "TP")
             summary["tp_rows"] += len(tp_rows)
             entry_lines[fname] = {
-                str(r.get("编号", "")).strip(): ln
-                for r, ln in zip(tp_rows, marks) if str(r.get("编号", "")).strip()
+                str(r.get("AI测试点编号", "")).strip(): ln
+                for r, ln in zip(tp_rows, marks) if str(r.get("AI测试点编号", "")).strip()
             }
             idx = tp_index.setdefault(tag, {})
             seen = set()  # 编号唯一性按文件内判定，跨功能文件重复合法
             for r in tp_rows:
-                tid = (r.get("编号") or "").strip()
+                tid = (r.get("AI测试点编号") or "").strip()
                 record = "{} {}".format(fname, tid) if tid else "{} (空编号)".format(fname)
                 if not re.fullmatch(r"TP-\d+", tid):
-                    failures.append({"record": record, "field": "编号", "anchor": "-", "reason": "TP 编号格式非法（应为 TP-数字）"})
+                    failures.append({"record": record, "field": "AI测试点编号", "anchor": "-", "reason": "AI测试点编号格式非法（应为 TP-数字）"})
                     continue
                 if tid in seen:
-                    failures.append({"record": record, "field": "编号", "anchor": "-", "reason": "TP 编号在本文件内重复（文件内永久唯一，不得复用）"})
+                    failures.append({"record": record, "field": "AI测试点编号", "anchor": "-", "reason": "AI测试点编号在本文件内重复（文件内永久唯一，不得复用）"})
                     continue
                 seen.add(tid)
-                idx[tid] = {"name": (r.get("测试点名称") or "").strip(), "func": (r.get("关联业务功能") or "").strip(), "tc_count": 0, "record": record}
-                anc = [a for a in anchors_of(r.get("出处锚点")) if a not in ("-", "")]
+                idx[tid] = {"name": (r.get("测试点") or "").strip(), "func": (r.get("系统功能") or "").strip(), "tc_count": 0, "record": record}
+                anc = [a for a in anchors_of(r.get("备注")) if a not in ("-", "")]
                 if not anc:
-                    failures.append({"record": record, "field": "出处锚点", "anchor": "-", "reason": "锚点为空（每条 TP 须有证明对象存在的原文锚点；方法论补充条目同样不得虚构字段/功能）"})
+                    failures.append({"record": record, "field": "备注", "anchor": "-", "reason": "备注锚点为空（每条 TP 须有证明对象存在的原文锚点；补充条目同样不得虚构字段/功能）"})
                 for a in anc:
                     summary["checks"] += 1
                     reason = check_anchor(a, docs)
                     if reason:
-                        failures.append({"record": record, "field": "出处锚点", "anchor": a, "reason": reason})
-                check_basis_type(r, record, failures, summary, "tp_methodology")
-                check_clar_ref(r.get("澄清依据"), clar_set, record, failures, has_clar)
+                        failures.append({"record": record, "field": "备注", "anchor": a, "reason": reason})
+                check_basis_type(r, record, clar_set, has_clar, failures, summary, "tp_methodology")
                 dim = (r.get("测试维度") or "").strip()
                 sub = (r.get("所属小类") or "").strip()
                 if dim not in TP_DIMENSIONS:
@@ -294,55 +291,62 @@ def main():
             tc_rows, marks = load_json_rows(path, TC_REQUIRED, TC_NAME, "TC清单", "TC")
             summary["tc_rows"] += len(tc_rows)
             entry_lines[fname] = {
-                str(r.get("编号", "")).strip(): ln
-                for r, ln in zip(tc_rows, marks) if str(r.get("编号", "")).strip()
+                str(r.get("AI用例编号", "")).strip(): ln
+                for r, ln in zip(tc_rows, marks) if str(r.get("AI用例编号", "")).strip()
             }
             seen = set()  # 编号唯一性按文件内判定
-            dup_map = {}  # (关联TP, 数据, 步骤, 预期) → [编号]，四要素全同即重复
+            dup_map = {}  # (测试点, 数据, 步骤, 预期) → [编号]，四要素全同即重复
             for r in tc_rows:
-                tcid = (r.get("编号") or "").strip()
+                tcid = (r.get("AI用例编号") or "").strip()
                 record = "{} {}".format(fname, tcid) if tcid else "{} (空编号)".format(fname)
                 if not re.fullmatch(r"TC-\d+", tcid):
-                    failures.append({"record": record, "field": "编号", "anchor": "-", "reason": "TC 编号格式非法（应为 TC-数字）"})
+                    failures.append({"record": record, "field": "AI用例编号", "anchor": "-", "reason": "AI用例编号格式非法（应为 TC-数字）"})
                     continue
                 if tcid in seen:
-                    failures.append({"record": record, "field": "编号", "anchor": "-", "reason": "TC 编号在本文件内重复（文件内永久唯一，不得复用）"})
+                    failures.append({"record": record, "field": "AI用例编号", "anchor": "-", "reason": "AI用例编号在本文件内重复（文件内永久唯一，不得复用）"})
                     continue
                 seen.add(tcid)
-                ref_raw = (r.get("关联TP") or "").strip()
+                if not (r.get("系统") or "").strip():
+                    failures.append({"record": record, "field": "系统", "anchor": "(空)", "reason": "系统为空（须填需求文档中该业务功能所属系统的中文名称）"})
+                pri = (r.get("优先级") or "").strip()
+                if pri not in TC_PRIORITIES:
+                    failures.append({"record": record, "field": "优先级", "anchor": pri or "(空)", "reason": "优先级非法（仅 高/中/低，单值）"})
+                kind = (r.get("用例类型") or "").strip()
+                if kind not in TC_KINDS:
+                    failures.append({"record": record, "field": "用例类型", "anchor": kind or "(空)", "reason": "用例类型非法（仅 流程用例/功能用例，单值）"})
+                ref_raw = (r.get("测试点") or "").strip()
                 ref, _, name_seg = ref_raw.partition(" ")
                 ref = ref.strip()
                 name_seg = name_seg.strip()
                 if not re.fullmatch(r"TP-\d+", ref):
-                    failures.append({"record": record, "field": "关联TP", "anchor": ref_raw or "(空)", "reason": "关联TP 编号段格式非法（应为 TP-数字，第一个空格分隔编号与名称）"})
+                    failures.append({"record": record, "field": "测试点", "anchor": ref_raw or "(空)", "reason": "测试点编号段格式非法（应为 TP-数字，第一个空格分隔编号与名称）"})
                 elif ref not in idx:
-                    failures.append({"record": record, "field": "关联TP", "anchor": ref, "reason": "关联TP {} 在功能 {} 的 TP 文件中不存在（TC 只能关联同功能 TP 文件内的编号）".format(ref, tag)})
+                    failures.append({"record": record, "field": "测试点", "anchor": ref, "reason": "测试点 {} 在功能 {} 的 TP 文件中不存在（TC 只能关联同功能 TP 文件内的编号）".format(ref, tag)})
                 else:
                     entry = idx[ref]
                     covered.add((tag, ref))
                     entry["tc_count"] += 1
                     if not name_seg:
-                        failures.append({"record": record, "field": "关联TP", "anchor": ref_raw, "reason": "关联TP 缺名称段（应为 编号+名称 双信息，第一个空格分隔）"})
+                        failures.append({"record": record, "field": "测试点", "anchor": ref_raw, "reason": "测试点缺名称段（应为 编号+名称 双信息，第一个空格分隔）"})
                     elif entry["name"] != name_seg:
-                        failures.append({"record": record, "field": "关联TP", "anchor": name_seg, "reason": "关联TP 名称段与 TP 文件中 {} 的测试点名称不一致".format(ref)})
-                    tp_func = (r.get("关联业务功能") or "").strip()
-                    if tp_func != entry["func"]:
-                        failures.append({"record": record, "field": "关联业务功能", "anchor": tp_func, "reason": "关联业务功能与主 TP {} 的关联业务功能不一致".format(ref)})
+                        failures.append({"record": record, "field": "测试点", "anchor": name_seg, "reason": "测试点名称段与 TP 文件中 {} 的测试点不一致".format(ref)})
+                    sys_func = (r.get("系统功能") or "").strip()
+                    if sys_func != entry["func"]:
+                        failures.append({"record": record, "field": "系统功能", "anchor": sys_func, "reason": "系统功能与主 TP {} 的不一致".format(ref)})
                 m = (r.get("测试方法") or "").strip()
                 if m not in TC_METHODS:
                     failures.append({"record": record, "field": "测试方法", "anchor": m or "(空)", "reason": "测试方法非法（六枚举：等价类+边界值/决策表/状态迁移/场景法/正交实验/错误推测，单值）"})
-                anc = [a for a in anchors_of(r.get("出处锚点")) if a not in ("-", "")]
+                anc = [a for a in anchors_of(r.get("备注")) if a not in ("-", "")]
                 if not anc:
-                    failures.append({"record": record, "field": "出处锚点", "anchor": "-", "reason": "锚点为空（每条 TC 须有证明对象存在的原文锚点；方法论补充条目同样不得虚构字段/功能）"})
+                    failures.append({"record": record, "field": "备注", "anchor": "-", "reason": "备注锚点为空（每条 TC 须有证明对象存在的原文锚点；补充条目同样不得虚构字段/功能）"})
                 for a in anc:
                     summary["checks"] += 1
                     reason = check_anchor(a, docs)
                     if reason:
-                        failures.append({"record": record, "field": "出处锚点", "anchor": a, "reason": reason})
-                check_basis_type(r, record, failures, summary, "tc_methodology")
-                check_clar_ref(r.get("澄清依据"), clar_set, record, failures, has_clar)
+                        failures.append({"record": record, "field": "备注", "anchor": a, "reason": reason})
+                check_basis_type(r, record, clar_set, has_clar, failures, summary, "tc_methodology")
                 if re.fullmatch(r"TP-\d+", ref):
-                    dup_key = (ref, dup_field(r.get("测试数据")), dup_field(r.get("操作步骤")), dup_field(r.get("预期结果")))
+                    dup_key = (ref, dup_field(r.get("测试数据")), dup_field(r.get("测试步骤")), dup_field(r.get("预期结果")))
                     dup_map.setdefault(dup_key, []).append(tcid)
             for _key, ids in sorted(dup_map.items()):
                 if len(ids) > 1:
@@ -350,7 +354,7 @@ def main():
                         "record": "{} {}".format(fname, "、".join(ids)),
                         "field": "用例重复",
                         "anchor": _key[0],
-                        "reason": "关联TP/测试数据/操作步骤/预期结果四要素全同——保留一条，其余改为该 TP 独立分支（同值改名、伪边界等硬凑仍属语义检）",
+                        "reason": "测试点/测试数据/测试步骤/预期结果四要素全同——保留一条，其余改为该 TP 独立分支（同值改名、伪边界等硬凑仍属语义检）",
                     })
 
     if args.tc:

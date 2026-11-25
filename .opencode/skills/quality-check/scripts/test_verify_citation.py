@@ -16,8 +16,8 @@ sys.path.insert(0, HERE)
 
 from lib_citation import json_table_with_lines
 
-TP_HEADERS = ["编号", "关联业务功能", "测试点名称", "类型", "测试维度", "所属小类", "用例展开重点", "依据类型", "澄清依据", "出处锚点"]
-TC_HEADERS = ["编号", "关联业务功能", "关联TP", "用例名称", "用例类型", "测试方法", "前置条件", "测试数据", "操作步骤", "预期结果", "依据类型", "澄清依据", "出处锚点"]
+TP_HEADERS = ["AI测试点编号", "系统功能", "测试点", "类型", "测试维度", "所属小类", "用例展开重点", "依据类型", "备注"]
+TC_HEADERS = ["AI用例编号", "系统", "系统功能", "测试点", "用例名称", "优先级", "用例类型", "测试方法", "前置条件", "测试数据", "测试步骤", "预期结果", "依据类型", "备注"]
 
 # 原文固定三行可锚内容，行号 4/7/10
 PRD_LINES = [
@@ -67,12 +67,12 @@ def read_rows(path):
         return json.load(fh)["rows"]
 
 
-def tp_row(tid, tname, sub, basis="原文依据", clar=None, anchors=None):
-    return [tid, "F01 新增", tname, "功能级", "基础功能", sub, ["分支一", "分支二"], basis, clar or [], anchors or [A1]]
+def tp_row(tid, tname, sub, basis="原文依据", anchors=None):
+    return [tid, "F01 新增", tname, "功能级", "基础功能", sub, ["分支一", "分支二"], basis, anchors or [A1]]
 
 
-def tc_row(tcid, tp_ref, tname, data, steps, expect, anchors=None):
-    return [tcid, "F01 新增", tp_ref, tname, "正向", "等价类+边界值", "已登录", data, steps, expect, "原文依据", [], anchors or [A1]]
+def tc_row(tcid, tp_ref, tname, data, steps, expect, anchors=None, basis="原文依据"):
+    return [tcid, "客户管理系统", "F01 新增", tp_ref, tname, "高", "功能用例", "等价类+边界值", "已登录", data, steps, expect, basis, anchors or [A1]]
 
 
 class Env(unittest.TestCase):
@@ -98,8 +98,8 @@ class Env(unittest.TestCase):
         if rows is None:
             rows = [
                 tp_row("TP-001", "验证界面展示", "功能正确性"),
-                tp_row("TP-002", "验证正常新增", "功能正确性", clar=["C-01"], anchors=[A3]),
-                tp_row("TP-003", "验证字段约束", "字段校验", basis="方法论补充", anchors=[A2]),
+                tp_row("TP-002", "验证正常新增", "功能正确性", basis="澄清依据(C-01)", anchors=[A3]),
+                tp_row("TP-003", "验证字段约束", "字段校验", basis="补充条目", anchors=[A2]),
             ]
         make_table(self.tp_path, "F01-TP", TP_HEADERS, rows)
 
@@ -245,15 +245,54 @@ class TestEndToEnd(Env):
         make_table(self.tp_path, "F01-TP", TP_HEADERS, rows)
         code, payload = self.verify_tp_tc()
         self.assertEqual(code, 1)
-        self.assertTrue(any(f["field"] == "出处锚点" for f in payload["failures"]))
+        self.assertTrue(any(f["field"] == "备注" for f in payload["failures"]))
 
     def test_unknown_clar_ref_fails(self):
         rows = read_rows(self.tp_path)
-        rows[0][-2] = ["C-99"]
+        rows[0][7] = "澄清依据(C-99)"
+        rows[1][7] = "方法论补充"
         make_table(self.tp_path, "F01-TP", TP_HEADERS, rows)
         code, payload = self.verify_tp_tc()
         self.assertEqual(code, 1)
-        self.assertTrue(any("C-99" in f["reason"] for f in payload["failures"]))
+        basis_fails = [f for f in payload["failures"] if f["field"] == "依据类型"]
+        self.assertEqual(len(basis_fails), 2)
+        self.assertTrue(any("C-99" in f["reason"] for f in basis_fails))
+        self.assertTrue(any("依据类型非法" in f["reason"] for f in basis_fails))
+
+    def test_tc_new_columns_enforced(self):
+        rows = read_rows(self.tc_path)
+        rows[0][1] = ""      # 系统置空
+        rows[0][5] = "紧急"   # 优先级越枚举
+        rows[0][6] = "正向"   # 用例类型旧值不再合法
+        make_table(self.tc_path, "F01-TC", TC_HEADERS, rows)
+        code, payload = self.verify_tp_tc()
+        self.assertEqual(code, 1)
+        fields = {f["field"] for f in payload["failures"]}
+        self.assertTrue({"系统", "优先级", "用例类型"} <= fields)
+
+    def test_tc_basis_merged_column_checked(self):
+        rows = read_rows(self.tc_path)
+        rows[0][12] = "澄清依据(C-01)"   # 合法引用，编号存在
+        rows[1][12] = "澄清依据(C-99)"   # 编号不存在
+        rows[2][12] = "方法论补充"       # 旧值不再合法
+        rows[3][12] = "补充条目"         # 合法
+        make_table(self.tc_path, "F01-TC", TC_HEADERS, rows)
+        code, payload = self.verify_tp_tc()
+        self.assertEqual(code, 1)
+        basis_fails = [f for f in payload["failures"] if f["field"] == "依据类型"]
+        self.assertEqual(len(basis_fails), 2)
+        self.assertTrue(any("C-99" in f["reason"] for f in basis_fails))
+        self.assertTrue(any("依据类型非法" in f["reason"] for f in basis_fails))
+
+    def test_tc_remark_anchor_checked(self):
+        rows = read_rows(self.tc_path)
+        rows[0][13] = ['prd1.md:4 => "不存在的摘抄"']
+        rows[1][13] = []
+        make_table(self.tc_path, "F01-TC", TC_HEADERS, rows)
+        code, payload = self.verify_tp_tc()
+        self.assertEqual(code, 1)
+        remarks = [f for f in payload["failures"] if f["field"] == "备注"]
+        self.assertEqual(len(remarks), 2)
 
     def test_missing_clar_file_fatal(self):
         code, payload = self.run_verify("--docs", self.docs, "--tp", self.tp_path, "--clar", os.path.join(self.root, "nope.md"))

@@ -12,7 +12,6 @@ R_ATTR = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}i
 XLSX_POS = re.compile(r"^(?P<file>.+?\.xlsx)#(?P<sheet>.+?)!(?P<cell>[A-Za-z]{1,3}\d+)$", re.IGNORECASE)
 DOCX_POS = re.compile(r"^(?P<file>.+?\.docx)#(?P<section>.+)$", re.IGNORECASE)
 MD_POS = re.compile(r"^(?P<file>.+?):(?P<start>\d+)(?:-(?P<end>\d+))?$")
-CLAR_REF = re.compile(r"^(C-\d+)(\(默认\))?$")
 SEP_LINE = re.compile(r"^:?-{3,}:?$")
 
 
