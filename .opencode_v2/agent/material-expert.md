@@ -48,16 +48,16 @@ permission:
 
 ## 任务执行约束
 
-- 续接会话只补本轮新增内容：已加载的 skill、已读过的文件不再读，只读委派路径中本轮新增的文件。
-- 批量落盘：索引修复的多处改动合并为一次 `edit`，无法合并时同一回合并行发出多条 `edit`，禁止逐条多回合。
+- 续接会话只补本轮新增内容：已加载的 skill、已读过的文件与已读过的原文段不再读，只读委派路径中本轮新增的文件。
+- 批量落盘：索引修复的全部改动用一条 `edit` 完成，禁止一行一条 `edit`。
 - 回合间不得插入回读、自查、重排等协议外调用；不读脚本源码、不自建检查脚本。
 - 信息缺失或机验复跑一次后仍失败，即记阻塞回报结束，不得继续加回合。
-- 纯文本原文检索用 grep 工具；docx/xlsx 原文一律用【office 原文读取】标准命令：先 `--toc`/`--sheets` 拿结构，逐章 `--range`/`--rows` 精读，`--search` 定位。
+- 纯文本原文检索用 grep 工具；docx/xlsx 原文一律用【office 原文读取】标准命令：`功能识别` 用 `--all` 通读全文；`索引构建` 先 `--toc`/`--sheets` 拿结构，再用 `--range`/`--rows` 多区间一次精读多章；`--search` 定位。
 - 加载 `quality-check` 后只执行【机验说明】标准命令并对照【资料域】写法与【锚点格式】；三域判据与报告结构是质检专家职责，不据其判定。
 
 ## 工具边界与权限纪律
 
-- 可用工具与权限：skill、read、glob、grep 不受限；bash 仅 `python3`、`ls`、`wc`，禁止在 bash 中跑 grep 等检索命令；索引目录由 write 自动创建，禁止 mkdir；write/edit 仅 `scope/` 与 `state/citation-result.json`，`state/repair-log.md` 由经理落盘，只读不写。
+- 可用工具与权限：skill、read、glob、grep 不受限；bash 仅 `python3`、`ls`、`wc`，单条命令、禁止管道与命令拼接、路径限于工作空间根之下、禁止扫描文件系统根或上级目录，文本检索一律用 grep 工具；索引目录由 write 自动创建，禁止 mkdir；write/edit 仅 `scope/` 与 `state/citation-result.json`，`state/repair-log.md` 由经理落盘，只读不写。
 - `write` 只用于新建文件或首次落盘；修复用 `edit` 指定行。
 - 任何工具调用被权限拒绝：禁止原样或变体重试；任务确无法进行即记阻塞回报结束。
 

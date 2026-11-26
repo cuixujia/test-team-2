@@ -72,16 +72,19 @@ Y 或 N，列剩余阻塞与重大项
 
 ### office 原文读取
 
-docx/xlsx 禁用 read 工具，用下列标准命令读取，逐字执行、无管道无变量：
+docx/xlsx 禁用 read 工具，用下列标准命令读取：
 
-| 目的 | 命令 |
-| --- | --- |
-| docx 标题树与段落区间 | `python3 SKILLS_ROOT/quality-check/scripts/docx_text.py <docx绝对路径> --toc` |
-| docx 读段落 | `python3 SKILLS_ROOT/quality-check/scripts/docx_text.py <docx绝对路径> --range <A> <B>` |
-| docx 关键词定位 | `python3 SKILLS_ROOT/quality-check/scripts/docx_text.py <docx绝对路径> --search "<关键词>"` |
-| xlsx Sheet 清单 | `python3 SKILLS_ROOT/quality-check/scripts/xlsx_text.py <xlsx绝对路径> --sheets` |
-| xlsx 读行 | `python3 SKILLS_ROOT/quality-check/scripts/xlsx_text.py <xlsx绝对路径> --rows <Sheet名> <A> <B>` |
-| xlsx 关键词定位 | `python3 SKILLS_ROOT/quality-check/scripts/xlsx_text.py <xlsx绝对路径> --search "<关键词>"` |
+| 目的 | 命令 | 作用与传参 |
+| --- | --- | --- |
+| docx 标题树 | `python3 SKILLS_ROOT/quality-check/scripts/docx_text.py <docx绝对路径> --toc` | 输出全部标题及各自覆盖的段落区间，据此决定精读范围 |
+| docx 通读全文 | `python3 SKILLS_ROOT/quality-check/scripts/docx_text.py <docx绝对路径> --all` | 输出全部段落，功能识别类通读任务用 |
+| docx 读段落 | `python3 SKILLS_ROOT/quality-check/scripts/docx_text.py <docx绝对路径> --range <A-B,C-D>` | 输出多段区间文本；区间用 `614-616,900-935`，越界自动钳位，无需先知总段数 |
+| docx 关键词定位 | `python3 SKILLS_ROOT/quality-check/scripts/docx_text.py <docx绝对路径> --search <关键词>` | 输出含关键词的段落号与上下文，用于反查锚点位置 |
+| xlsx Sheet 清单 | `python3 SKILLS_ROOT/quality-check/scripts/xlsx_text.py <xlsx绝对路径> --sheets` | 输出各 Sheet 名与行列规模 |
+| xlsx 读行 | `python3 SKILLS_ROOT/quality-check/scripts/xlsx_text.py <xlsx绝对路径> --rows <Sheet名> <A-B,C-D>` | 输出该 Sheet 多段行区间，Sheet 名照抄 `--sheets` 输出 |
+| xlsx 关键词定位 | `python3 SKILLS_ROOT/quality-check/scripts/xlsx_text.py <xlsx绝对路径> --search <关键词>` | 输出含关键词的 Sheet、行号与内容 |
+
+传参纪律：文档路径、Sheet 名与关键词一律不加引号；逐字执行，禁止管道与命令拼接；读原文优先用多区间一次读完，禁止逐段十几次调用。
 
 ## 机验说明
 

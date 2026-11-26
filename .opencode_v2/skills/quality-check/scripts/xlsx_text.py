@@ -28,19 +28,44 @@ def cmd_sheets(path):
         print("{}: {} 行非空, 列 {}".format(name, len(rows), ",".join(cols) if cols else "无"))
 
 
-def cmd_rows(path, sheet, a, b):
-    """输出 Sheet 第 a-b 行，每行一行文本。"""
+def rnum(s):
+    """行号入参：兼容 10 与 R10 两种写法。"""
+    return int(str(s).lstrip("Rr"))
+
+
+def parse_segs(args):
+    """解析行区间入参：支持 10 20 单区间与 10-20,35-40 多区间。"""
+    if len(args) == 2 and not any(c in "".join(args) for c in "-,"):
+        return [(rnum(args[0]), rnum(args[1]))]
+    segs = []
+    for a in args:
+        for part in a.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            if "-" in part:
+                x, y = part.split("-", 1)
+                segs.append((rnum(x), rnum(y)))
+            else:
+                n = rnum(part)
+                segs.append((n, n))
+    return segs
+
+
+def cmd_rows(path, sheet, segs):
+    """输出 Sheet 各区间行，每行一行文本。"""
     try:
         rows = xlsx_rows(path, sheet)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 2
     idx = dict(rows)
-    for rn in range(a, b + 1):
-        if rn not in idx:
-            continue
-        parts = ["{}={}".format(c, norm(t)[:CELL_MAX]) for c, t in sorted(idx[rn].items())]
-        print("R{}: {}".format(rn, " | ".join(parts)))
+    for a, b in segs:
+        for rn in range(a, b + 1):
+            if rn not in idx:
+                continue
+            parts = ["{}={}".format(c, norm(t)[:CELL_MAX]) for c, t in sorted(idx[rn].items())]
+            print("R{}: {}".format(rn, " | ".join(parts)))
     return 0
 
 
@@ -73,7 +98,7 @@ def main():
     ap.add_argument("xlsx", help="xlsx 绝对路径")
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--sheets", action="store_true", help="列出 Sheet 与规模")
-    g.add_argument("--rows", nargs=3, metavar=("SHEET", "A", "B"), help="输出指定行区间")
+    g.add_argument("--rows", nargs="+", metavar="ARG", help="读行：--rows <Sheet名> 10-20,35-40 或 --rows <Sheet名> 10 20")
     g.add_argument("--search", metavar="KW", help="跨 Sheet 搜索")
     args = ap.parse_args()
 
@@ -82,7 +107,7 @@ def main():
             cmd_sheets(args.xlsx)
             sys.exit(0)
         if args.rows:
-            sys.exit(cmd_rows(args.xlsx, args.rows[0], int(args.rows[1]), int(args.rows[2])))
+            sys.exit(cmd_rows(args.xlsx, args.rows[0], parse_segs(args.rows[1:])))
         sys.exit(cmd_search(args.xlsx, args.search))
     except Exception as exc:
         print("解析失败：{}".format(exc), file=sys.stderr)

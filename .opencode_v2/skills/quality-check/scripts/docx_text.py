@@ -30,16 +30,46 @@ def cmd_toc(paras):
     print("共 {} 个非空段落".format(len(paras)))
 
 
-def cmd_range(paras, a, b):
-    """输出 P{a}-P{b} 文本，每段带所在节标题。"""
-    if a < 1 or b > len(paras) or a > b:
-        print("段落区间非法：P{}-P{}，共 {} 段".format(a, b, len(paras)), file=sys.stderr)
-        return 2
-    for i in range(a - 1, b):
-        text = norm(paras[i][1])
-        if len(text) > TRUNC:
-            text = text[:TRUNC] + "…"
-        print("P{} [{}] {}".format(i + 1, docx_section_title(paras, i), text))
+def pnum(s):
+    """段落号入参：兼容 61 与 P61 两种写法。"""
+    return int(str(s).lstrip("Pp"))
+
+
+def parse_segs(args):
+    """解析 --range 入参：支持 614 616 单区间与 614-616,900-935 多区间。"""
+    if len(args) == 2 and not any(c in "".join(args) for c in "-,"):
+        return [(pnum(args[0]), pnum(args[1]))]
+    segs = []
+    for a in args:
+        for part in a.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            if "-" in part:
+                x, y = part.split("-", 1)
+                segs.append((pnum(x), pnum(y)))
+            else:
+                n = pnum(part)
+                segs.append((n, n))
+    return segs
+
+
+def cmd_range(paras, segs):
+    """逐区间输出段落文本；越界自动钳位，节标题变化时输出分组行。"""
+    n = len(paras)
+    last_title = None
+    for a, b in segs:
+        a = max(1, min(a, n))
+        b = max(a, min(b, n))
+        for i in range(a - 1, b):
+            title = norm(docx_section_title(paras, i))
+            if title != last_title:
+                print("## {}".format(title or "封面区"))
+                last_title = title
+            text = norm(paras[i][1])
+            if len(text) > TRUNC:
+                text = text[:TRUNC] + "…"
+            print("P{} {}".format(i + 1, text))
     return 0
 
 
@@ -67,7 +97,8 @@ def main():
     ap.add_argument("docx", help="docx 绝对路径")
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--toc", action="store_true", help="标题树与段落区间")
-    g.add_argument("--range", nargs=2, type=int, metavar=("A", "B"), help="输出 PA-PB 文本")
+    g.add_argument("--all", action="store_true", help="输出全文所有段落")
+    g.add_argument("--range", nargs="+", metavar="SEG", help="读段落：--range 614-616,900-935 或 --range 614 616")
     g.add_argument("--search", metavar="KW", help="按关键词定位段落")
     args = ap.parse_args()
 
@@ -82,8 +113,10 @@ def main():
 
     if args.toc:
         sys.exit(cmd_toc(paras) or 0)
+    if args.all:
+        sys.exit(cmd_range(paras, [(1, len(paras))]))
     if args.range:
-        sys.exit(cmd_range(paras, args.range[0], args.range[1]))
+        sys.exit(cmd_range(paras, parse_segs(args.range)))
     sys.exit(cmd_search(paras, args.search))
 
 
