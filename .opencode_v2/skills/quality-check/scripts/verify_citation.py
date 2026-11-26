@@ -40,7 +40,10 @@ from lib_citation import (
 
 TP_REQUIRED = ["AI测试点编号", "系统功能", "测试点", "类型", "测试维度", "所属小类", "用例展开重点", "依据类型", "备注"]
 # 需求两列 headers 恒含，机验只校验列存在；列值来自 briefing 需求信息小节，不校验
-TC_REQUIRED = ["AI用例编号", "系统", "系统功能", "测试点", "用例名称", "优先级", "用例类型", "测试方法", "前置条件", "测试数据", "测试步骤", "预期结果", "依据类型", "备注", "需求分组名称", "需求名称"]
+TC_REQUIRED = ["AI用例编号", "系统", "系统功能", "测试点", "用例名称", "优先级", "用例类型", "测试方法", "前置条件", "测试数据", "测试步骤", "预期结果", "依据类型", "备注", "需求分组名称", "需求名称", "是否可入库", "是否删除"]
+# 是否可入库/是否删除 为枚举列（是/否），本场景默认 是/否；机验只校验取值在枚举内，不锁固定值
+TC_YESNO_COLS = ("是否可入库", "是否删除")
+TC_YESNO = {"是", "否"}
 # name 字段命名规则：tp 文件为 功能号-TP，tc 文件为 功能号-TC（与 workflow【清单结构】一致）
 TP_NAME = re.compile(r"^[^-]+-TP$")
 TC_NAME = re.compile(r"^[^-]+-TC$")
@@ -315,6 +318,10 @@ def main():
                 kind = (r.get("用例类型") or "").strip()
                 if kind not in TC_KINDS:
                     failures.append({"record": record, "field": "用例类型", "anchor": kind or "(空)", "reason": "用例类型非法（仅 流程用例/功能用例，单值）"})
+                for col in TC_YESNO_COLS:
+                    val = (r.get(col) or "").strip()
+                    if val not in TC_YESNO:
+                        failures.append({"record": record, "field": col, "anchor": val or "(空)", "reason": "{}须为枚举值 是/否".format(col)})
                 ref_raw = (r.get("测试点") or "").strip()
                 ref, _, name_seg = ref_raw.partition(" ")
                 ref = ref.strip()

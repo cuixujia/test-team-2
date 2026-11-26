@@ -18,7 +18,7 @@ from lib_citation import json_table_with_lines
 
 TP_HEADERS = ["AI测试点编号", "系统功能", "测试点", "类型", "测试维度", "所属小类", "用例展开重点", "依据类型", "备注"]
 # 需求两列 headers 恒含，机验只校验列存在不校验列值
-TC_HEADERS = ["AI用例编号", "系统", "系统功能", "测试点", "用例名称", "优先级", "用例类型", "测试方法", "前置条件", "测试数据", "测试步骤", "预期结果", "依据类型", "备注", "需求分组名称", "需求名称"]
+TC_HEADERS = ["AI用例编号", "系统", "系统功能", "测试点", "用例名称", "优先级", "用例类型", "测试方法", "前置条件", "测试数据", "测试步骤", "预期结果", "依据类型", "备注", "需求分组名称", "需求名称", "是否可入库", "是否删除"]
 
 # 原文固定三行可锚内容，行号 4/7/10
 PRD_LINES = [
@@ -73,8 +73,8 @@ def tp_row(tid, tname, sub, basis="原文依据", anchors=None):
 
 
 def tc_row(tcid, tp_ref, tname, data, steps, expect, anchors=None, basis="原文依据"):
-    # 末两列为需求字段，与 TC_HEADERS 对齐
-    return [tcid, "客户管理系统", "F01 新增", tp_ref, tname, "高", "功能用例", "等价类+边界值", "已登录", data, steps, expect, basis, anchors or [A1], "协同平台", "客户需求管理二期"]
+    # 末四列为需求两列与固定值两列，与 TC_HEADERS 对齐
+    return [tcid, "客户管理系统", "F01 新增", tp_ref, tname, "高", "功能用例", "等价类+边界值", "已登录", data, steps, expect, basis, anchors or [A1], "协同平台", "客户需求管理二期", "是", "否"]
 
 
 class Env(unittest.TestCase):
@@ -234,7 +234,7 @@ class TestEndToEnd(Env):
     def test_tc_missing_req_columns_fatal(self):
         # 需求两列缺失即致命，列值不校验
         bad = [h for h in TC_HEADERS if h not in ("需求分组名称", "需求名称")]
-        rows = [r[:14] for r in read_rows(self.tc_path)]
+        rows = [r[:14] + r[16:] for r in read_rows(self.tc_path)]
         make_table(self.tc_path, "F01-TC", bad, rows)
         code, payload = self.verify_tp_tc()
         self.assertEqual(code, 2)
@@ -245,6 +245,27 @@ class TestEndToEnd(Env):
         rows = read_rows(self.tc_path)
         rows[0][14], rows[0][15] = "", ""
         rows[1][14], rows[1][15] = "其他分组", "其他需求"
+        make_table(self.tc_path, "F01-TC", TC_HEADERS, rows)
+        code, payload = self.verify_tp_tc()
+        self.assertEqual(code, 0)
+        self.assertTrue(payload["ok"])
+
+    def test_tc_yesno_columns_enforced(self):
+        # 是否可入库/是否删除 取值须在枚举 是/否 内，越枚举即判失败
+        rows = read_rows(self.tc_path)
+        rows[0][16] = "可入库"   # 是否可入库 越枚举
+        rows[1][17] = ""          # 是否删除 空值越枚举
+        make_table(self.tc_path, "F01-TC", TC_HEADERS, rows)
+        code, payload = self.verify_tp_tc()
+        self.assertEqual(code, 1)
+        fields = {f["field"] for f in payload["failures"]}
+        self.assertTrue({"是否可入库", "是否删除"} <= fields)
+
+    def test_tc_yesno_swapped_values_ok(self):
+        # 用户逐条改值：与默认相反但仍是合法枚举，机验放行
+        rows = read_rows(self.tc_path)
+        rows[0][16] = "否"   # 是否可入库 改否
+        rows[1][17] = "是"   # 是否删除 改是
         make_table(self.tc_path, "F01-TC", TC_HEADERS, rows)
         code, payload = self.verify_tp_tc()
         self.assertEqual(code, 0)
