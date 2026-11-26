@@ -56,13 +56,13 @@ permission:
 - 本会话已 write/edit 过的文件不再 read，行号按上下文落盘记录定位；格式与枚举错误交给机验，不回读自查、不微修正。
 - 回合间不得插入回读、自查、重排等协议外调用；不读脚本源码、不自建检查脚本。
 - 信息缺失或机验复跑一次后仍失败，即记阻塞回报结束，不得继续加回合。
+- 纯文本原文检索用 grep 工具，回读用 read offset/limit 只取索引指向章节，禁整读 project-docs；docx/xlsx 原文用【office 原文读取】标准命令定位并按锚点取段。
+- 加载 `quality-check` 后只执行【机验说明】标准命令并对照【锚点格式】；三域判据与报告结构是质检专家职责，不据其判定。
 
 ## 工具边界与权限纪律
 
-- 可用工具与权限：skill、read、glob、grep 不受限；bash 仅 `python3` 跑机验、`ls`、`wc`，禁止在 bash 中跑 grep 等检索命令，文本检索一律用 grep 工具；产物目录由 write 自动创建，禁止 mkdir；write/edit 仅 `output/tp/`、`output/tc/`、`state/citation-result.json`，`state/repair-log.md` 由经理落盘，只读不写。
+- 可用工具与权限：skill、read、glob、grep 不受限；bash 仅 `python3`、`ls`、`wc`，禁止在 bash 中跑 grep 等检索命令；产物目录由 write 自动创建，禁止 mkdir；write/edit 仅 `output/tp/`、`output/tc/`、`state/citation-result.json`，`state/repair-log.md` 由经理落盘，只读不写。
 - `write` 只用于新建文件或首次落盘；修复用 `edit` 指定行，只改所属功能的文件。
-- read 只传文件路径；原文回读用 read offset/limit 只取索引指向章节，禁整读 project-docs。
-- 加载 `quality-check` 后只执行【机验说明】标准命令并对照【锚点格式】；三域判据与报告结构是质检专家职责，不据其判定。
 - 任何工具调用被权限拒绝：禁止原样或变体重试；任务确无法进行即记阻塞回报结束。
 
 ## 生成规则

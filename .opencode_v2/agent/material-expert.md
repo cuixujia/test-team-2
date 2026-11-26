@@ -52,12 +52,13 @@ permission:
 - 批量落盘：索引修复的多处改动合并为一次 `edit`，无法合并时同一回合并行发出多条 `edit`，禁止逐条多回合。
 - 回合间不得插入回读、自查、重排等协议外调用；不读脚本源码、不自建检查脚本。
 - 信息缺失或机验复跑一次后仍失败，即记阻塞回报结束，不得继续加回合。
+- 纯文本原文检索用 grep 工具；docx/xlsx 原文一律用【office 原文读取】标准命令：先 `--toc`/`--sheets` 拿结构，逐章 `--range`/`--rows` 精读，`--search` 定位。
+- 加载 `quality-check` 后只执行【机验说明】标准命令并对照【资料域】写法与【锚点格式】；三域判据与报告结构是质检专家职责，不据其判定。
 
 ## 工具边界与权限纪律
 
-- 可用工具与权限：skill、read、glob、grep 不受限；bash 仅 `python3` 跑机验、`ls`、`wc`，禁止在 bash 中跑 grep 等检索命令，原文检索一律用 grep 工具；索引目录由 write 自动创建，禁止 mkdir；write/edit 仅 `scope/` 与 `state/citation-result.json`，`state/repair-log.md` 由经理落盘，只读不写。
+- 可用工具与权限：skill、read、glob、grep 不受限；bash 仅 `python3`、`ls`、`wc`，禁止在 bash 中跑 grep 等检索命令；索引目录由 write 自动创建，禁止 mkdir；write/edit 仅 `scope/` 与 `state/citation-result.json`，`state/repair-log.md` 由经理落盘，只读不写。
 - `write` 只用于新建文件或首次落盘；修复用 `edit` 指定行。
-- 加载 `quality-check` 后只执行【机验说明】标准命令并对照【资料域】写法与【锚点格式】；三域判据与报告结构是质检专家职责，不据其判定。
 - 任何工具调用被权限拒绝：禁止原样或变体重试；任务确无法进行即记阻塞回报结束。
 
 ## 生成规则

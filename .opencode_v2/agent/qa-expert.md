@@ -60,12 +60,12 @@ R2 及以后复检，不跑机验：
 - 复检按 repair-log 改动行号定点回读产物文件，禁整文件重读；各产物文件的报告追加同回合并行发出。
 - 回合间不得插入回读、自查、重排等协议外调用；不读脚本源码、不自建检查脚本。
 - 机验 `exit 2` 或缺委派项导致报告无法完成，即记阻塞回报结束。
+- 纯文本原文检索用 grep 工具，回读用 read offset/limit 只取索引指向章节，禁读整文件；docx/xlsx 原文用【office 原文读取】标准命令定位并按锚点取段。
+- 加载 `quality-check` 后机验按【机验说明】执行；`test-point-workflow`、`test-case-workflow` 仅作产物写法格式参照，判据只取对应域判据。
 
 ## 工具边界与权限纪律
 
-- 可用工具与权限：skill、read、glob、grep 不受限；bash 仅 `python3` 跑机验、`ls`、`wc`，禁止在 bash 中跑 grep 等检索命令，文本检索一律用 grep 工具；产物与报告目录由 write 自动创建，禁止 mkdir；write/edit 仅 `output/reports/` 下三类质检报告，`state/`、`scope/`、`project-docs` 与 TP/TC 产物一律只读不写。
-- read 只传文件路径；原文回读用 read offset/limit 只取索引指向章节，禁读整文件。
-- 加载 `quality-check` 后机验按【机验说明】执行；`test-point-workflow`、`test-case-workflow` 仅作产物写法格式参照，判据只取对应域判据。
+- 可用工具与权限：skill、read、glob、grep 不受限；bash 仅 `python3`、`ls`、`wc`，禁止在 bash 中跑 grep 等检索命令；产物与报告目录由 write 自动创建，禁止 mkdir；write/edit 仅 `output/reports/` 下三类质检报告，`state/`、`scope/`、`project-docs` 与 TP/TC 产物一律只读不写。
 - 任何工具调用被权限拒绝：禁止原样或变体重试；任务确无法进行即记阻塞回报结束。
 
 ## 工作步骤

@@ -9,9 +9,15 @@ M_NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 P_NS = "{http://schemas.openxmlformats.org/package/2006/relationships}"
 R_ATTR = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
 
-XLSX_POS = re.compile(r"^(?P<file>.+?\.xlsx)#(?P<sheet>.+?)!(?P<cell>[A-Za-z]{1,3}\d+)$", re.IGNORECASE)
-DOCX_POS = re.compile(r"^(?P<file>.+?\.docx)#(?P<section>.+)$", re.IGNORECASE)
-MD_POS = re.compile(r"^(?P<file>.+?):(?P<start>\d+)(?:-(?P<end>\d+))?$")
+XLSX_POS = re.compile(
+    r"^(?P<file>.+?\.xlsx):(?P<sheet>[^#]+)#(?P<cell>[A-Za-z]{1,3}\d+)(?::(?P<cell2>[A-Za-z]{1,3}\d+))?$",
+    re.IGNORECASE,
+)
+DOCX_POS = re.compile(
+    r"^(?P<file>.+?\.docx):[Pp](?P<num>\d+)(?:#(?P<section>.+))?$",
+    re.IGNORECASE,
+)
+MD_POS = re.compile(r"^(?P<file>.+?\.(?:md|txt|csv)):(?P<start>\d+)(?:-(?P<end>\d+))?$", re.IGNORECASE)
 SEP_LINE = re.compile(r"^:?-{3,}:?$")
 
 
@@ -114,13 +120,17 @@ def read_lines(path):
         return fh.read().splitlines()
 
 
-def docx_paragraphs(path):
+def docx_paras(path):
+    """docx 非空段落枚举：跳过纯空白段落，按文档顺序编号 P1 起，含表格内段落。返回 [(style, text)]。
+    编号口径与 docx_text.py 及机验分支完全一致，三处共用此函数。"""
     with zipfile.ZipFile(path) as zh:
         data = zh.read("word/document.xml")
     root = ET.fromstring(data)
     paras = []
     for p in root.iter(W_NS + "p"):
         text = "".join(t.text or "" for t in p.iter(W_NS + "t"))
+        if not text.strip():
+            continue
         style = ""
         ppr = p.find(W_NS + "pPr")
         if ppr is not None:
@@ -129,6 +139,14 @@ def docx_paragraphs(path):
                 style = pstyle.get(W_NS + "val") or ""
         paras.append((style, text))
     return paras
+
+
+def docx_section_title(paras, idx):
+    """段落所在节标题：该段自身是 Heading 则取自身，否则取向上最近 Heading；无任何 Heading 则返回空串。"""
+    for k in range(idx, -1, -1):
+        if is_heading(paras[k][0]):
+            return norm(paras[k][1])
+    return ""
 
 
 def is_heading(style):
@@ -145,10 +163,19 @@ def xlsx_shared(zh):
     return shared
 
 
-def xlsx_cell(path, sheet, coord):
+def col_num(s):
+    """列字母转 1-based 列号：A=1, Z=26, AA=27。"""
+    n = 0
+    for ch in s.upper():
+        n = n * 26 + (ord(ch) - 64)
+    return n
+
+
+def xlsx_rows(path, sheet):
+    """解析指定 Sheet，返回 [(行号, {列字母: 文本})]，跳过空行。Sheet 不存在或文件损坏抛 ValueError。"""
     with zipfile.ZipFile(path) as zh:
         if "xl/workbook.xml" not in zh.namelist():
-            return None, "损坏的xlsx：缺少workbook.xml"
+            raise ValueError("损坏的xlsx：缺少workbook.xml")
         wb = ET.fromstring(zh.read("xl/workbook.xml"))
         rid = None
         for sh in wb.iter(M_NS + "sheet"):
@@ -156,10 +183,10 @@ def xlsx_cell(path, sheet, coord):
                 rid = sh.get(R_ATTR)
                 break
         if rid is None:
-            return None, "未找到Sheet：{}".format(sheet)
+            raise ValueError("未找到Sheet：{}".format(sheet))
         rels_path = "xl/_rels/workbook.xml.rels"
         if rels_path not in zh.namelist():
-            return None, "损坏的xlsx：缺少rels"
+            raise ValueError("损坏的xlsx：缺少rels")
         rels = ET.fromstring(zh.read(rels_path))
         target = None
         for rel in rels.iter(P_NS + "Relationship"):
@@ -167,38 +194,48 @@ def xlsx_cell(path, sheet, coord):
                 target = rel.get("Target") or ""
                 break
         if not target:
-            return None, "未找到Sheet对应的工作表：{}".format(sheet)
+            raise ValueError("未找到Sheet对应的工作表：{}".format(sheet))
         inner = target.lstrip("/")
         if not inner.startswith("xl/"):
             inner = "xl/" + inner
         if inner not in zh.namelist():
-            return None, "损坏的xlsx：缺少{} ".format(inner)
+            raise ValueError("损坏的xlsx：缺少{}".format(inner))
         shared = xlsx_shared(zh)
         ws = ET.fromstring(zh.read(inner))
-        for c in ws.iter(M_NS + "c"):
-            if (c.get("r") or "").upper() != coord.upper():
-                continue
-            ctype = c.get("t") or ""
-            v = c.find(M_NS + "v")
-            if ctype == "s" and v is not None:
-                idx = int(v.text)
-                if 0 <= idx < len(shared):
-                    return shared[idx], None
-                return None, "共享串索引越界"
-            if ctype == "inlineStr":
-                is_el = c.find(M_NS + "is")
-                if is_el is not None:
-                    return "".join(t.text or "" for t in is_el.iter(M_NS + "t")), None
-            if v is not None and v.text is not None:
-                return v.text, None
-            return "", None
-        return None, "未找到单元格：{}".format(coord)
+        rows = []
+        for row in ws.iter(M_NS + "row"):
+            rn = int(row.get("r") or 0)
+            cells = {}
+            for c in row.iter(M_NS + "c"):
+                ref = c.get("r") or ""
+                m = re.match(r"([A-Za-z]+)(\d+)", ref)
+                if not m:
+                    continue
+                col = m.group(1).upper()
+                ctype = c.get("t") or ""
+                v = c.find(M_NS + "v")
+                text = ""
+                if ctype == "s" and v is not None:
+                    idx = int(v.text)
+                    if 0 <= idx < len(shared):
+                        text = shared[idx]
+                elif ctype == "inlineStr":
+                    is_el = c.find(M_NS + "is")
+                    if is_el is not None:
+                        text = "".join(t.text or "" for t in is_el.iter(M_NS + "t"))
+                elif v is not None and v.text is not None:
+                    text = v.text
+                if text.strip():
+                    cells[col] = text
+            if cells:
+                rows.append((rn, cells))
+        return rows
 
 
 def check_anchor(anchor, roots):
     parsed = split_anchor(anchor)
     if parsed is None:
-        return "锚点格式非法（应为 位置 => \"摘抄\"）"
+        return "锚点格式非法：应为 位置 => \"摘抄\""
     pos, quote = parsed
     core = core_quote(quote)
     if not core:
@@ -210,57 +247,61 @@ def check_anchor(anchor, roots):
         cands = find_candidates(mx.group("file"), roots)
         if not cands:
             return "未找到原文文件：{}".format(mx.group("file"))
+        sheet = mx.group("sheet")
+        c1, c2 = mx.group("cell"), mx.group("cell2")
         reasons = []
         for path in cands:
             try:
-                value, err = xlsx_cell(path, mx.group("sheet"), mx.group("cell"))
-            except Exception as exc:
-                reasons.append("{}: 解析失败 {}".format(path, exc))
+                rows = xlsx_rows(path, sheet)
+            except ValueError as exc:
+                reasons.append("{}: {}".format(path, exc))
                 continue
-            if err:
-                reasons.append("{}: {}".format(path, err))
-                continue
-            if core_n and core_n in norm(value):
+            if c2:
+                m1, m2 = re.match(r"([A-Za-z]+)(\d+)", c1), re.match(r"([A-Za-z]+)(\d+)", c2)
+                col1, col2 = sorted([col_num(m1.group(1)), col_num(m2.group(1))])
+                r1, r2 = sorted([int(m1.group(2)), int(m2.group(2))])
+                texts = [t for rn, cells in rows if r1 <= rn <= r2
+                         for col, t in cells.items() if col1 <= col_num(col) <= col2]
+                loc = "{}#{}:{}".format(sheet, c1, c2)
+            else:
+                m = re.match(r"([A-Za-z]+)(\d+)", c1)
+                col, rn = m.group(1).upper(), int(m.group(2))
+                texts = [cells[col] for r, cells in rows if r == rn and col in cells]
+                loc = "{}#{}".format(sheet, c1)
+            if core_n and core_n in norm(" ".join(texts)):
                 return None
-            reasons.append("{}: 单元格内容未匹配到摘抄".format(path))
+            reasons.append("{}: {} 未匹配到摘抄".format(path, loc))
         return "；".join(reasons)
 
-    md_ = DOCX_POS.match(pos)
-    if md_:
-        section = md_.group("section")
-        cands = find_candidates(md_.group("file"), roots)
+    dp = DOCX_POS.match(pos)
+    if dp:
+        cands = find_candidates(dp.group("file"), roots)
         if not cands:
-            return "未找到原文文件：{}".format(md_.group("file"))
+            return "未找到原文文件：{}".format(dp.group("file"))
+        num = int(dp.group("num"))
+        section = dp.group("section")
         reasons = []
         for path in cands:
             try:
-                paras = docx_paragraphs(path)
+                paras = docx_paras(path)
             except Exception as exc:
                 reasons.append("{}: 解析失败 {}".format(path, exc))
                 continue
-            heads = [(i, t) for i, (st, t) in enumerate(paras) if is_heading(st)]
-            if not heads:
-                reasons.append("{}: 无章节结构（无Heading样式）→ 应升级澄清".format(path))
+            if num < 1 or num > len(paras):
+                reasons.append("{}: P{} 越界，共 {} 个非空段落".format(path, num, len(paras)))
                 continue
-            sec_n = norm(section)
-            hit = None
-            for i, t in heads:
-                t_n = norm(t)
-                if sec_n == t_n or sec_n in t_n or t_n in sec_n:
-                    hit = i
-                    break
-            if hit is None:
-                reasons.append("{}: 未找到章节「{}」".format(path, section))
+            if core_n not in norm(paras[num - 1][1]):
+                reasons.append("{}: P{} 内未匹配到摘抄".format(path, num))
                 continue
-            nxt = len(paras)
-            for j, _t in heads:
-                if j > hit:
-                    nxt = j
-                    break
-            body = " ".join(paras[k][1] for k in range(hit, nxt))
-            if core_n and core_n in norm(body):
-                return None
-            reasons.append("{}: 章节「{}」内未匹配到摘抄".format(path, section))
+            owner = docx_section_title(paras, num - 1)
+            if section is not None and norm(section):
+                if norm(section) != owner:
+                    reasons.append("{}: P{} 所在节为「{}」，锚点标题「{}」不匹配".format(path, num, owner or "封面区", section))
+                    continue
+            elif owner:
+                reasons.append("{}: P{} 在「{}」节内，锚点缺所在节标题".format(path, num, owner))
+                continue
+            return None
         return "；".join(reasons)
 
     m = MD_POS.match(pos)
@@ -285,6 +326,8 @@ def check_anchor(anchor, roots):
             reasons.append("{}: 行{}-{}内未匹配到摘抄".format(path, start, end))
         return "；".join(reasons)
 
+    if re.search(r"\.(pdf|ppt|pptx|doc|rtf|odt)\b", pos, re.IGNORECASE):
+        return "原文类型不支持，请升级为澄清：{}".format(pos)
     return "锚点位置格式不识别：{}".format(pos)
 
 

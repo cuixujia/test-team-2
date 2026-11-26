@@ -16,6 +16,43 @@ sys.path.insert(0, HERE)
 
 from lib_citation import json_table_with_lines
 
+
+def make_docx(path, paras):
+    """构建最小 docx 夹具：paras = [(style, text), ...]，style 为空串表示普通段落。"""
+    import zipfile
+    body = "".join(
+        f'<w:p><w:pPr><w:pStyle w:val="{st}"/></w:pPr><w:r><w:t>{t}</w:t></w:r></w:p>'
+        if st else f'<w:p><w:r><w:t>{t}</w:t></w:r></w:p>'
+        for st, t in paras
+    )
+    doc = f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>{body}</w:body></w:document>'
+    with zipfile.ZipFile(path, "w") as zh:
+        zh.writestr("word/document.xml", doc)
+
+
+def make_xlsx(path, sheets):
+    """构建最小 xlsx 夹具：sheets = [(name, [(row_num, {col: text}), ...])]。"""
+    import zipfile
+    wb = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheets>'
+    rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    for i, (name, _) in enumerate(sheets, 1):
+        wb += f'<sheet name="{name}" sheetId="{i}" r:id="rId{i}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>'
+        rels += f'<Relationship Id="rId{i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="worksheets/sheet{i}.xml"/>'
+    wb += '</sheets></workbook>'
+    rels += '</Relationships>'
+    with zipfile.ZipFile(path, "w") as zh:
+        zh.writestr("xl/workbook.xml", wb)
+        zh.writestr("xl/_rels/workbook.xml.rels", rels)
+        for i, (_, rows) in enumerate(sheets, 1):
+            ws = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'
+            for rn, cells in rows:
+                ws += f'<row r="{rn}">'
+                for col, text in sorted(cells.items()):
+                    ws += f'<c r="{col}{rn}" t="inlineStr"><is><t>{text}</t></is></c>'
+                ws += '</row>'
+            ws += '</sheetData></worksheet>'
+            zh.writestr(f"xl/worksheets/sheet{i}.xml", ws)
+
 TP_HEADERS = ["AI测试点编号", "系统功能", "测试点", "类型", "测试维度", "所属小类", "用例展开重点", "依据类型", "备注"]
 # 需求两列 headers 恒含，机验只校验列存在不校验列值
 TC_HEADERS = ["AI用例编号", "系统", "系统功能", "测试点", "用例名称", "优先级", "用例类型", "测试方法", "前置条件", "测试数据", "测试步骤", "预期结果", "依据类型", "备注", "需求分组名称", "需求名称", "是否可入库", "是否删除"]
@@ -360,6 +397,83 @@ class TestIndexMode(Env):
         code, payload = self.run_verify("--docs", self.docs, "--index", path)
         self.assertEqual(code, 1)
         self.assertEqual(payload["failures"][0]["record"], "resources-index")
+
+
+class TestOfficeAnchors(Env):
+    """Office 锚点：docx P 号与 xlsx 新语法，TP-only 模式只验锚点不涉用例守恒。"""
+
+    def setUp(self):
+        super().setUp()
+        self.docx_path = os.path.join(self.docs, "prd.docx")
+        make_docx(self.docx_path, [
+            ("Heading1", "产品需求说明书"),
+            ("Heading2", "1. 文档元信息"),
+            ("", "需求创建后进入待沟通状态"),
+            ("Heading2", "2. 业务流程"),
+            ("", "派发后进入处理中"),
+        ])
+        self.xlsx_path = os.path.join(self.docs, "data.xlsx")
+        make_xlsx(self.xlsx_path, [
+            ("功能清单", [
+                (1, {"A": "编号", "B": "名称"}),
+                (2, {"A": "F01", "B": "需求创建"}),
+                (3, {"A": "F02", "B": "需求派发"}),
+            ])
+        ])
+
+    def verify_tp_anchor(self, anchor):
+        """把默认 TP 首行锚点换成待测锚点，跑 TP-only 机验。"""
+        rows = read_rows(self.tp_path)
+        rows[0][-1] = [anchor]
+        make_table(self.tp_path, "F01-TP", TP_HEADERS, rows)
+        return self.run_verify("--docs", self.docs, "--tp", self.tp_path, "--clar", self.clar)
+
+    def test_docx_anchor_ok(self):
+        code, payload = self.verify_tp_anchor('prd.docx:P3#1. 文档元信息 => "需求创建后进入待沟通状态"')
+        self.assertEqual(code, 0, payload["failures"])
+
+    def test_docx_title_mismatch(self):
+        code, payload = self.verify_tp_anchor('prd.docx:P3#2. 业务流程 => "需求创建后进入待沟通状态"')
+        self.assertEqual(code, 1)
+        self.assertTrue(any("所在节" in f["reason"] for f in payload["failures"]))
+
+    def test_docx_excerpt_mismatch(self):
+        code, payload = self.verify_tp_anchor('prd.docx:P3#1. 文档元信息 => "派发后进入处理中"')
+        self.assertEqual(code, 1)
+        self.assertTrue(any("未匹配到摘抄" in f["reason"] for f in payload["failures"]))
+
+    def test_docx_missing_title(self):
+        code, payload = self.verify_tp_anchor('prd.docx:P3 => "需求创建后进入待沟通状态"')
+        self.assertEqual(code, 1)
+        self.assertTrue(any("缺所在节标题" in f["reason"] for f in payload["failures"]))
+
+    def test_docx_out_of_range(self):
+        code, payload = self.verify_tp_anchor('prd.docx:P999#1. 文档元信息 => "需求创建后"')
+        self.assertEqual(code, 1)
+        self.assertTrue(any("越界" in f["reason"] for f in payload["failures"]))
+
+    def test_docx_old_format_unsupported(self):
+        code, payload = self.verify_tp_anchor('prd.docx#1. 文档元信息 => "需求创建后进入待沟通状态"')
+        self.assertEqual(code, 1)
+        self.assertTrue(any("格式不识别" in f["reason"] for f in payload["failures"]))
+
+    def test_xlsx_single_cell_ok(self):
+        code, payload = self.verify_tp_anchor('data.xlsx:功能清单#B2 => "需求创建"')
+        self.assertEqual(code, 0, payload["failures"])
+
+    def test_xlsx_range_ok(self):
+        code, payload = self.verify_tp_anchor('data.xlsx:功能清单#A2:B3 => "F01"')
+        self.assertEqual(code, 0, payload["failures"])
+
+    def test_xlsx_excerpt_mismatch(self):
+        code, payload = self.verify_tp_anchor('data.xlsx:功能清单#B2 => "需求派发"')
+        self.assertEqual(code, 1)
+        self.assertTrue(any("未匹配到摘抄" in f["reason"] for f in payload["failures"]))
+
+    def test_xlsx_sheet_not_found(self):
+        code, payload = self.verify_tp_anchor('data.xlsx:不存在的Sheet#A1 => "编号"')
+        self.assertEqual(code, 1)
+        self.assertTrue(any("未找到Sheet" in f["reason"] for f in payload["failures"]))
 
 
 if __name__ == "__main__":
