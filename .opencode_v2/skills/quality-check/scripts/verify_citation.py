@@ -74,8 +74,8 @@ TP_DIMENSIONS = {
     "可靠性与稳定性": {"故障恢复", "健壮性"},
 }
 TP_TYPES = {"功能级", "场景级"}
-# 测试方法六枚举（《通用测试方法论》「六、方法选型决策指南」，单值白名单）
-TC_METHODS = {"等价类+边界值", "决策表", "状态迁移", "场景法", "正交实验", "错误推测"}
+# 测试方法白名单（《通用测试方法论》「六、方法选型决策指南」，单值；等价类与边界值拆写单值同样合法）
+TC_METHODS = {"等价类+边界值", "等价类", "边界值", "决策表", "状态迁移", "场景法", "正交实验", "错误推测"}
 # TC 优先级与用例类型枚举（test-case-workflow【字段要求】）
 TC_PRIORITIES = {"高", "中", "低"}
 TC_KINDS = {"流程用例", "功能用例"}
@@ -343,7 +343,7 @@ def main():
                         failures.append({"record": record, "field": "系统功能", "anchor": sys_func, "reason": "系统功能与主 TP {} 的不一致".format(ref)})
                 m = (r.get("测试方法") or "").strip()
                 if m not in TC_METHODS:
-                    failures.append({"record": record, "field": "测试方法", "anchor": m or "(空)", "reason": "测试方法非法（六枚举：等价类+边界值/决策表/状态迁移/场景法/正交实验/错误推测，单值）"})
+                    failures.append({"record": record, "field": "测试方法", "anchor": m or "(空)", "reason": "测试方法非法（枚举：等价类+边界值/等价类/边界值/决策表/状态迁移/场景法/正交实验/错误推测，单值）"})
                 anc = [a for a in anchors_of(r.get("备注")) if a not in ("-", "")]
                 if not anc:
                     failures.append({"record": record, "field": "备注", "anchor": "-", "reason": "备注锚点为空（每条 TC 须有证明对象存在的原文锚点；补充条目同样不得虚构字段/功能）"})
