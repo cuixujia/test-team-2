@@ -21,7 +21,8 @@ export default tool({
       throw new Error("主题不能为空")
     }
     const p = resolve(args.path)
-    let st: import("node:fs").Stats
+    // 不写内联类型注解：工具文件按纯 JS 加载，`import("node:fs").Stats` 会导致解析失败
+    let st
     try {
       st = statSync(p)
     } catch {

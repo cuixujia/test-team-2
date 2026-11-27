@@ -39,7 +39,7 @@ export default Plugin.define({
             throw new Error("主题不能为空")
           }
           const p = resolve(path)
-          let st: Stats
+          let st
           try {
             st = statSync(p)
           } catch {
